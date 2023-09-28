@@ -28,12 +28,6 @@ html {
 }
 
 .home {
-  background-image: url("/engineer_block.jpeg");
-  background-position: center top;
-  background-size: cover;
-  box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.7);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   height: 100vh;
   width: 100vw;
   display: flex;
@@ -41,10 +35,27 @@ html {
   align-items: center;
 }
 
-@media (max-width: 650px ) {
-  .home {
+.bg {
+  background-image: url("/engineer_block.jpeg");
+  background-position: center top;
+  background-size: cover;
+  box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.7);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 650px) {
+  .bg {
     background-image: url("/engineer_block_mobile.jpeg");
     background-position: center center;
+    background-size: cover;
+    box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.7);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    height: 100%;
+    width: 100%;
   }
 }
 
@@ -89,17 +100,18 @@ html {
   position: fixed;
   bottom: 0;
   right: 0;
-  padding: 10px 20px; 
-  background-color: #007bff; 
+  padding: 10px 20px;
+  background-color: #007bff;
   color: #fff;
   border: none;
   cursor: pointer;
-  z-index: 999; /* Ensure it's above other content */
+  z-index: 999;
+  /* Ensure it's above other content */
 }
 
 .something {
   height: 80vh;
-  width: 100vw ;
+  width: 100vw;
 }
 
 .pdf {
