@@ -3,7 +3,7 @@ import Typewriter from "typewriter-effect";
 function Start() {
   return (
     <>
-      <div className="home">
+      <div className="home" id="01">
         <div className="bg fluid"></div>
         <div className="textdiv position-absolute top-50 start-50 translate-middle">
           <h1 className="align-middle text-center mono">

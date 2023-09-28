@@ -98,20 +98,22 @@ html {
 
 .EmailButton {
   position: fixed;
-  bottom: 0;
-  right: 0;
+  bottom: 1vh;
+  right: 0.5vw;
   padding: 10px 20px;
   background-color: #007bff;
   color: #fff;
   border: none;
   cursor: pointer;
   z-index: 999;
+  border-radius: 10px;
   /* Ensure it's above other content */
 }
 
 .something {
-  height: 80vh;
+  height: 140vh;
   width: 100vw;
+  background-color: #272727;
 }
 
 .pdf {
@@ -121,3 +123,49 @@ html {
   flex-direction: column;
   align-items: center;
 }
+
+.highlight {
+  background-image: linear-gradient(to right, #F27121cc, #E94057cc, #8A2387cc);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+
+.viewer {
+  height: 100vh;
+  width: 50vw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+@media (max-width: 650px) {
+  .viewer {
+    height: 80vh;
+    width: 90vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 0;
+  }
+}
+.overlay {
+  z-index: 999;
+}
+
+.footer {
+  background-color: #272727;
+  height: 100%;
+}
+
+.footerText {
+  color: #ffffff!important;
+}
+
+.footerTextLast {
+  color: #ffffff!important;
+}
+
+.footerText:hover {
+  color: #9b9b9b!important;
+}
+

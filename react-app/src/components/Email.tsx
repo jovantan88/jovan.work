@@ -16,9 +16,11 @@ function Email() {
   );
   return (
     <>
-      <OverlayTrigger trigger="click" placement="left" overlay={popover}>
-        <FontAwesomeIcon icon={faEnvelope} className="display-5 EmailButton"/>
-      </OverlayTrigger>
+      <div className="overlay">
+        <OverlayTrigger trigger="click" placement="left" overlay={popover}>
+          <FontAwesomeIcon icon={faEnvelope} className="display-5 EmailButton" />
+        </OverlayTrigger>
+      </div>
     </>
   );
 }
