@@ -26,7 +26,7 @@ function App() {
                             <li className="nav-item"><a href="mailto:jovantanwork@gmail.com" target="_blank" className="footerText nav-link px-2">Email</a></li>
                             <li className="nav-item"><a href="https://github.com/kyourandesu" target="_blank" className="footerText nav-link px-2">Github</a></li>
                             <li className="nav-item"><a href="https://www.linkedin.com/in/jovan-tan-a01143248/" target="_blank" className="footerText nav-link px-2">LinkedIn</a></li>
-                            <li className="nav-item"><a href="tel:98279890" target="_blank" className="footerText nav-link px-2">Message</a></li>
+                            <li className="nav-item"><a href="tel:89020050" target="_blank" className="footerText nav-link px-2">Message</a></li>
                         </ul>
                         <p className="footerTextLast text-center">&copy; 2023 Jovan Tan <img className="mx-1 img-fluid footerlogo" src="JT.png"></img></p>
                     </footer>
