@@ -1,7 +1,9 @@
 import Start from './components/Start.tsx';
 import Email from './components/Email.tsx';
 import Something from './components/Something.tsx';
-// import Education from './components/Education.tsx';
+import Education from './components/Education.tsx';
+import Skills from './components/Skills.tsx';
+import Experience from './components/Experience.tsx';
 // import BsFoot from './components/BsFoot.tsx';
 import './App.css';
 
@@ -15,9 +17,11 @@ function App() {
                 integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
             />
             <Start />
-            <Something />
-            {/* <Education /> */}
+            <Education />
             <Email />
+            <Skills />
+            <Experience />
+            <Something />
             <div className="footer">
                 <div className="footerText container">
                     <footer className="py-3">

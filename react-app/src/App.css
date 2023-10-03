@@ -124,10 +124,80 @@ html {
   align-items: center;
 }
 
+.outsideEdu {
+  background-color: #272727;
+}
+
+.outsideSkills {
+  background-color: #272727;
+}
+
+.outsideExp {
+  background-color: #272727;
+}
+
+.education {
+  max-width: 30%;
+  background-color: #272727;
+  color: #ffffff;
+  padding-top: 10vh;
+}
+
+.skills {
+  max-width: 30%;
+  background-color: #272727;
+  color: #ffffff;
+  padding-top: 10vh;
+}
+
+.experience {
+  max-width: 30%;
+  background-color: #272727;
+  color: #ffffff;
+  padding-top: 10vh;
+}
+
+@media (max-width: 650px) {
+  .education {
+    max-width: 90%;
+    background-color: #272727;
+    color: #ffffff;
+    padding-top: 5vh;
+  }
+
+  .skills {
+    max-width: 90%;
+    background-color: #272727;
+    color: #ffffff;
+    padding-top: 5vh;
+  }
+
+  .experience {
+    max-width: 90%;
+    background-color: #272727;
+    color: #ffffff;
+    padding-top: 5vh;
+  }
+}
+
+.ccas {
+  background-color: #272727;
+  color: #ffffff;
+  padding-top: 5vh;
+}
+
+.skillname {
+  padding-top: 3vh;
+}
+
 .highlight {
-  background-image: linear-gradient(to right, #F27121cc, #E94057cc, #8A2387cc);
+  /* background-image: linear-gradient(to right, #F27121cc, #E94057cc, #8A2387cc); */
+  background-color: #7a7a7a;
+  color: #ffffff;
   border-radius: 6px;
   padding: 3px 6px;
+  margin: 0.25rem;
+  display: inline-flex;
 }
 
 .viewer {
