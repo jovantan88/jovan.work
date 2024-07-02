@@ -1,4 +1,5 @@
 import Start from './components/Start.tsx';
+import Introduction from './components/Introduction.tsx';
 import Email from './components/Email.tsx';
 import Something from './components/Something.tsx';
 import Education from './components/Education.tsx';
@@ -17,6 +18,7 @@ function App() {
                 integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
             />
             <Start />
+            <Introduction />
             <Education />
             <Email />
             <Skills />
