@@ -44,7 +44,7 @@ html {
 .something {
   height: 140vh;
   width: 100vw;
-  background-color: #272727;
+  background-color: #000000;
 }
 
 .pdf {
@@ -56,34 +56,34 @@ html {
 }
 
 .outsideEdu {
-  background-color: #272727;
+  background-color: #000000;
 }
 
 .outsideSkills {
-  background-color: #272727;
+  background-color: #000000;
 }
 
 .outsideExp {
-  background-color: #272727;
+  background-color: #000000;
 }
 
 .education {
   max-width: 30%;
-  background-color: #272727;
+  background-color: #000000;
   color: #ffffff;
   padding-top: 10vh;
 }
 
 .skills {
   max-width: 30%;
-  background-color: #272727;
+  background-color: #000000;
   color: #ffffff;
   padding-top: 10vh;
 }
 
 .experience {
   max-width: 30%;
-  background-color: #272727;
+  background-color: #000000;
   color: #ffffff;
   padding-top: 10vh;
 }
@@ -91,28 +91,28 @@ html {
 @media (max-width: 650px) {
   .education {
     max-width: 90%;
-    background-color: #272727;
+    background-color: #000000;
     color: #ffffff;
     padding-top: 5vh;
   }
 
   .skills {
     max-width: 90%;
-    background-color: #272727;
+    background-color: #000000;
     color: #ffffff;
     padding-top: 5vh;
   }
 
   .experience {
     max-width: 90%;
-    background-color: #272727;
+    background-color: #000000;
     color: #ffffff;
     padding-top: 5vh;
   }
 }
 
 .ccas {
-  background-color: #272727;
+  background-color: #000000;
   color: #ffffff;
   padding-top: 5vh;
 }
@@ -154,7 +154,7 @@ html {
 }
 
 .footer {
-  background-color: #272727;
+  background-color: #000000;
   height: 100%;
 }
 
