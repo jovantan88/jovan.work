@@ -127,7 +127,7 @@ const Start: React.FC = () => {
           />
         </TypewriterText>
         <SubText className="josefin-sans">
-          Student | RL Enthusiast | Full Stack Developer
+          Data | AI | Full Stack
         </SubText>
       </TextDiv>
       <ScrollLinkContainer onClick={() => scrollToSection('02')}>

@@ -64,12 +64,14 @@ const StyledRow = styled(Row)`
 `;
 
 const SkillIcon = styled.div`
+  color: #07A0FF;
   font-size: 2rem;
   margin-bottom: 0.5rem;
   margin-top: 1rem;
 `;
 
 const SkillTitle = styled.h2`
+  color: #07A0FF;
   margin: 0;
   display: flex;
   align-items: center;
@@ -78,6 +80,7 @@ const SkillTitle = styled.h2`
 `;
 
 const FieldTitle = styled.h3`
+  color: #07A0FF;
   text-align: center;
   margin: 0;
   color: #00EFFF;
@@ -102,6 +105,13 @@ const SkillsSection = styled.div`
   padding-bottom: 3rem;
 `;
 
+const MySkillsHeading = styled.h1`
+  font-size: 3rem;  
+  color: #FFFFFF;
+  text-align: center;
+  margin-bottom: 3rem;
+`;
+
 function MySkills() {
   useEffect(() => {
     const skillTitles = document.querySelectorAll<HTMLElement>('.SkillTitle');
@@ -121,11 +131,22 @@ function MySkills() {
 
   return (
     <OuterDiv>
-      <StyledContainer>
+
+      <MySkillsHeading className="josefin-sans" data-aos="fade-up"> So what can I do?</MySkillsHeading>
+      <StyledContainer
+        data-aos="fade-up"
+        data-aos-offset="300"
+        data-aos-delay="0"
+        data-aos-duration="400"
+        data-aos-easing="ease"
+        data-aos-mirror="false"
+        data-aos-once="false"
+        data-aos-anchor-placement="top-bottom"
+      >
         <StyledRow>
           <Col md={4} className="text-light text-center">
             <SkillIcon><CgWebsite className="Skill-Icon" /></SkillIcon>
-            <SkillTitle className="SkillTitle text-light josefin-sans">Web Development</SkillTitle>
+            <SkillTitle className="SkillTitle josefin-sans">Web Development</SkillTitle>
             <Spacing />
             <SkillsSection>
               <FieldTitle className="josefin-sans">Frameworks</FieldTitle>
@@ -152,7 +173,7 @@ function MySkills() {
           </Col>
           <StyledColMiddle md={4} className="text-light text-center">
             <SkillIcon><BsGraphUpArrow className="Skill-Icon" /></SkillIcon>
-            <SkillTitle className="SkillTitle text-light josefin-sans">Data Analytics</SkillTitle>
+            <SkillTitle className="SkillTitle josefin-sans">Data Analytics</SkillTitle>
             <Spacing />
             <SkillsSection>
               <FieldTitle className="josefin-sans">Applications</FieldTitle>
@@ -173,7 +194,7 @@ function MySkills() {
           </StyledColMiddle>
           <Col md={4} className="text-light text-center">
             <SkillIcon><FaRobot className="Skill-Icon me-3" /></SkillIcon>
-            <SkillTitle className="SkillTitle text-light josefin-sans">Machine & Deep Learning</SkillTitle>
+            <SkillTitle className="SkillTitle josefin-sans">Machine & Deep Learning</SkillTitle>
             <Spacing />
             <SkillsSection>
               <FieldTitle className="josefin-sans">Machine Learning</FieldTitle>

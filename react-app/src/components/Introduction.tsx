@@ -3,31 +3,16 @@ import styled from 'styled-components';
 
 function Introduction() {
     const [padding, setPadding] = useState(calculatePadding(window.innerWidth));
-    const [opacity, setOpacity] = useState(0);
-    const [translateY, setTranslateY] = useState(30); // Initial translate value
 
     useEffect(() => {
         const handleResize = () => {
             setPadding(calculatePadding(window.innerWidth));
         };
 
-        const handleScroll = () => {
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            const maxScroll = window.innerHeight / 2; // Adjust this value to control the speed of fade-in
-            const newOpacity = Math.min(scrollTop / maxScroll, 1);
-            setOpacity(newOpacity);
-
-            // Calculate translate value based on opacity
-            const newTranslateY = 300 * (1 - newOpacity); // Translate from 30px to 0px
-            setTranslateY(newTranslateY);
-        };
-
         window.addEventListener('resize', handleResize);
-        window.addEventListener('scroll', handleScroll);
 
         return () => {
             window.removeEventListener('resize', handleResize);
-            window.removeEventListener('scroll', handleScroll);
         };
     }, []);
 
@@ -43,26 +28,31 @@ function Introduction() {
     `;
 
     const StyledH1 = styled.h1`
-        opacity: ${opacity};
-        transform: translateY(${translateY}px);
-        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        font-size: 3rem;
+        margin-bottom: 50px;
     `;
 
     const StyledP = styled.p`
+        font-size: 1.3rem;
         padding: 0px ${padding}px;
         margin: 0;
-        opacity: ${opacity};
-        transform: translateY(${translateY}px);
-        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    `;
+
+    const HeadShot = styled.img`
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        margin-bottom: 50px;
     `;
 
     return (
         <IntroductionDiv>
-            <StyledH1 className="text-center text-light josefin-sans">
+            <HeadShot src="/headshot.jpg" className="rounded-circle mx-auto d-block" data-aos="slide-up"></HeadShot>
+            <StyledH1 className="text-center text-light josefin-sans" data-aos="slide-up">
                 Hi, I'm Jovan
             </StyledH1>
-            <StyledP className="text-center text-light josefin-sans">
-                I'm 19 this year and currently pursuing a diploma in Applied AI and Analytics. Coding is my passion and I have an interest in web development and AI related topics, especially reinforcement learning. I'm open to new opportunities and learning new things.
+            <StyledP className="text-center text-light josefin-sans" data-aos="slide-up">
+                I'm 19 this year and currently pursuing a diploma in Applied AI and Analytics. Coding is my passion and I have an interest in web development and reinforcement learning.
             </StyledP>
         </IntroductionDiv>
     );
