@@ -114,7 +114,7 @@ const Start: React.FC = () => {
     <HomeContainer id="01">
       <BackgroundImage className="fluid"></BackgroundImage>
       <TextDiv>
-        <TypewriterText>
+        <TypewriterText className="josefin-sans">
           <Typewriter
             onInit={(typewriter) => {
               typewriter
@@ -126,7 +126,7 @@ const Start: React.FC = () => {
             }}
           />
         </TypewriterText>
-        <SubText>
+        <SubText className="josefin-sans">
           Student | RL Enthusiast | Full Stack Developer
         </SubText>
       </TextDiv>

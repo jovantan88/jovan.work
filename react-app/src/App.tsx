@@ -1,5 +1,6 @@
 import Start from './components/Start.tsx';
 import Introduction from './components/Introduction.tsx';
+import MySkills from './components/MySkills.tsx';
 import Email from './components/Email.tsx';
 import Something from './components/Something.tsx';
 import Education from './components/Education.tsx';
@@ -7,6 +8,7 @@ import Skills from './components/Skills.tsx';
 import Experience from './components/Experience.tsx';
 // import BsFoot from './components/BsFoot.tsx';
 import './App.css';
+
 
 function App() {
     return (
@@ -17,8 +19,12 @@ function App() {
                 href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
                 integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
             />
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
+            </style>
             <Start />
             <Introduction />
+            <MySkills />
             <Education />
             <Email />
             <Skills />

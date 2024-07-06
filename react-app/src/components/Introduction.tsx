@@ -58,10 +58,10 @@ function Introduction() {
 
     return (
         <IntroductionDiv>
-            <StyledH1 className="text-center text-light">
+            <StyledH1 className="text-center text-light josefin-sans">
                 Hi, I'm Jovan
             </StyledH1>
-            <StyledP className="text-center text-light">
+            <StyledP className="text-center text-light josefin-sans">
                 I'm 19 this year and currently pursuing a diploma in Applied AI and Analytics. Coding is my passion and I have an interest in web development and AI related topics, especially reinforcement learning. I'm open to new opportunities and learning new things.
             </StyledP>
         </IntroductionDiv>
