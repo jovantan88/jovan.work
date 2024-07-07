@@ -6,18 +6,25 @@ import Something from './components/Something.tsx';
 import Education from './components/Education.tsx';
 import Skills from './components/Skills.tsx';
 import Experience_old from './components/Experience_old.tsx';
+import Projects from './components/Projects.tsx';
 // import BsFoot from './components/BsFoot.tsx';
 import './App.css';
 import './App.js';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
+import { ReactLenis, useLenis } from 'lenis/react'
+
+
 function App() {
-
-
+    const lenis = useLenis(({ scroll }) => {
+        return {
+            scroll: scroll
+        }
+      })
     return (
-        
         <>
             <link href="https://fonts.googleapis.com/css2?family=Dancing+Script&family=Zen+Loop&display=swap" rel="stylesheet"></link>
+            <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
             <link
                 rel="stylesheet"
                 href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
@@ -26,28 +33,31 @@ function App() {
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&display=swap');
             </style>
-            <Start />
-            <Introduction />
-            <MySkills />
-            <Education />
-            <Email />
-            <Skills />
-            <Experience_old />
-            <Something />
-            <div className="footer">
-                <div className="footerText container">
-                    <footer className="py-3">
-                        <ul className="nav justify-content-center border-bottom pb-3 mb-3">
-                            <li className="nav-item"><a href="#01" className="footerText nav-link px-2">Home</a></li>
-                            <li className="nav-item"><a href="mailto:jovantanwork@gmail.com" target="_blank" className="footerText nav-link px-2">Email</a></li>
-                            <li className="nav-item"><a href="https://github.com/kyourandesu" target="_blank" className="footerText nav-link px-2">Github</a></li>
-                            <li className="nav-item"><a href="https://www.linkedin.com/in/jovan-tan-a01143248/" target="_blank" className="footerText nav-link px-2">LinkedIn</a></li>
-                            <li className="nav-item"><a href="tel:89020050" target="_blank" className="footerText nav-link px-2">Message</a></li>
-                        </ul>
-                        <p className="footerTextLast text-center">&copy; 2023 Jovan Tan <img className="mx-1 img-fluid footerlogo" src="JT.png"></img></p>
-                    </footer>
+            <ReactLenis root>
+                <Start />
+                <Introduction/>
+                <MySkills />
+                <Projects />
+                <Education />
+                <Email />
+                <Skills />
+                <Experience_old />
+                <Something />
+                <div className="footer">
+                    <div className="footerText container">
+                        <footer className="py-3">
+                            <ul className="nav justify-content-center border-bottom pb-3 mb-3">
+                                <li className="nav-item"><a href="#01" className="footerText nav-link px-2">Home</a></li>
+                                <li className="nav-item"><a href="mailto:jovantanwork@gmail.com" target="_blank" className="footerText nav-link px-2">Email</a></li>
+                                <li className="nav-item"><a href="https://github.com/kyourandesu" target="_blank" className="footerText nav-link px-2">Github</a></li>
+                                <li className="nav-item"><a href="https://www.linkedin.com/in/jovan-tan-a01143248/" target="_blank" className="footerText nav-link px-2">LinkedIn</a></li>
+                                <li className="nav-item"><a href="tel:89020050" target="_blank" className="footerText nav-link px-2">Message</a></li>
+                            </ul>
+                            <p className="footerTextLast text-center">&copy; 2023 Jovan Tan <img className="mx-1 img-fluid footerlogo" src="JT.png"></img></p>
+                        </footer>
+                    </div>
                 </div>
-            </div>
+            </ReactLenis>
         </>
     )
 }

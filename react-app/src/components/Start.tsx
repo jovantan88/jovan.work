@@ -18,6 +18,7 @@ const HomeContainer = styled.div`
     background-size: cover;
     box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.7);
     background-repeat: no-repeat;
+    background-attachment: fixed;
   }
 `;
 

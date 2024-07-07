@@ -25,6 +25,9 @@ function Introduction() {
     const IntroductionDiv = styled.div`
         background-color: #000000;
         padding: 200px 0px;
+        overflow: hidden;
+        width: 100%;
+        height: 100vh;
     `;
 
     const StyledH1 = styled.h1`
@@ -46,7 +49,7 @@ function Introduction() {
     `;
 
     return (
-        <IntroductionDiv>
+        <IntroductionDiv className="single-section">
             <HeadShot src="/headshot.jpg" className="rounded-circle mx-auto d-block" data-aos="slide-up"></HeadShot>
             <StyledH1 className="text-center text-light josefin-sans" data-aos="slide-up">
                 Hi, I'm Jovan

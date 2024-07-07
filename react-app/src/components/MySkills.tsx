@@ -34,6 +34,7 @@ const OuterDiv = styled.div`
   background-color: #000000;
   border: 0px;
   width: 100%;
+  padding-bottom: 100px;
 `;
 
 const StyledContainer = styled(Container)`
@@ -109,7 +110,7 @@ const MySkillsHeading = styled.h1`
   font-size: 3rem;  
   color: #FFFFFF;
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 8rem;
 `;
 
 function MySkills() {
@@ -130,7 +131,7 @@ function MySkills() {
   }, []);
 
   return (
-    <OuterDiv>
+    <OuterDiv className="single-section">
 
       <MySkillsHeading className="josefin-sans" data-aos="fade-up"> So what can I do?</MySkillsHeading>
       <StyledContainer
