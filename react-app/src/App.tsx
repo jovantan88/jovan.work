@@ -8,6 +8,7 @@ import Education from './components/Education.tsx';
 import Skills from './components/Skills.tsx';
 import Experience_old from './components/Experience_old.tsx';
 import Projects from './components/Projects.tsx';
+import Contact from './components/Contact.tsx';
 // import BsFoot from './components/BsFoot.tsx';
 import './App.css';
 import './App.js';
@@ -63,10 +64,11 @@ function App() {
                 <Introduction />
                 <MySkills />
                 <Projects />
-                <Education />
+                <Contact />
+                {/* <Education />
                 <Email />
                 <Skills />
-                <Experience_old />
+                <Experience_old /> */}
                 <Something />
                 <div className="footer">
                     <div className="footerText container">
@@ -78,7 +80,7 @@ function App() {
                                 <li className="nav-item"><a href="https://www.linkedin.com/in/jovan-tan-a01143248/" target="_blank" className="footerText nav-link px-2">LinkedIn</a></li>
                                 <li className="nav-item"><a href="tel:89020050" target="_blank" className="footerText nav-link px-2">Message</a></li>
                             </ul>
-                            <p className="footerTextLast text-center">&copy; 2023 Jovan Tan <img className="mx-1 img-fluid footerlogo" src="JT.png"></img></p>
+                            <p className="footerTextLast text-center">&copy; 2024 Jovan Tan <img className="mx-1 img-fluid footerlogo" src="JT.png"></img></p>
                         </footer>
                     </div>
                 </div>
