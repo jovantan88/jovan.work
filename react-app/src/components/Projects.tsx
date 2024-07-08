@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Card from 'react-bootstrap/Card';
 import styled from 'styled-components';
 import Container from 'react-bootstrap/Container';
@@ -69,29 +69,23 @@ const StyledCard = styled(Card)`
 
   .card-img-top,
   .card-video-top {
-    height: 200px;
     object-fit: cover;
   }
 `;
 
 function Projects() {
-  const cardContents = useRef<(HTMLImageElement | HTMLVideoElement | null)[]>([]);
+  const [maxHeight, setMaxHeight] = useState(200); // Set a default height
 
   useEffect(() => {
     const updateContentHeight = () => {
+      const elements = document.querySelectorAll('.card-img-top, .card-video-top');
       let maxHeight = 0;
 
-      cardContents.current.forEach(content => {
-        if (content) {
-          maxHeight = Math.max(maxHeight, content.clientHeight);
-        }
+      elements.forEach(element => {
+        maxHeight = Math.max(maxHeight, element.clientHeight);
       });
 
-      cardContents.current.forEach(content => {
-        if (content) {
-          content.style.height = `${maxHeight}px`;
-        }
-      });
+      setMaxHeight(maxHeight);
     };
 
     updateContentHeight();
@@ -111,10 +105,10 @@ function Projects() {
           <StyledCol lg={4} md={6}>
             <StyledCard>
               <Card.Img
-                ref={el => (cardContents.current[0] = el)}
                 className="card-img-top"
                 variant="top"
                 src="/VegePrediction.png"
+                style={{ height: maxHeight }}
               />
               <Card.Body>
                 <Card.Title>Vege Prediction</Card.Title>
@@ -130,10 +124,10 @@ function Projects() {
           <StyledCol lg={4} md={6}>
             <StyledCard>
               <Card.Img
-                ref={el => (cardContents.current[1] = el)}
                 className="card-img-top"
                 variant="top"
                 src="/CarPrediction.png"
+                style={{ height: maxHeight }}
               />
               <Card.Body>
                 <Card.Title>Car Price Prediction</Card.Title>
@@ -149,11 +143,11 @@ function Projects() {
           <StyledCol lg={4} md={6}>
             <StyledCard>
               <video
-                ref={el => (cardContents.current[2] = el)}
                 className="card-video-top"
                 autoPlay
                 loop
                 muted
+                style={{ height: maxHeight }}
               >
                 <source src="Cartpole.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
@@ -172,10 +166,10 @@ function Projects() {
           <StyledCol lg={4} md={6}>
             <StyledCard>
               <Card.Img
-                ref={el => (cardContents.current[3] = el)}
                 className="card-img-top"
                 variant="top"
                 src="/DisabilityWebsite.png"
+                style={{ height: maxHeight }}
               />
               <Card.Body>
                 <Card.Title>Website about Disabilities</Card.Title>
@@ -191,12 +185,11 @@ function Projects() {
           <StyledCol lg={4} md={6}>
             <StyledCard>
               <Card.Img
-                ref={el => (cardContents.current[4] = el)}
                 className="card-img-top"
                 variant="top"
                 src="/GAN.png"
+                style={{ height: maxHeight }}
               />
-
               <Card.Body>
                 <Card.Title>Generative Adversarial Network</Card.Title>
                 <Card.Subtitle className="mb-2">Deep Learning</Card.Subtitle>
@@ -211,11 +204,11 @@ function Projects() {
           <StyledCol lg={4} md={6}>
             <StyledCard>
               <video
-                ref={el => (cardContents.current[5] = el)}
                 className="card-video-top"
                 autoPlay
                 loop
                 muted
+                style={{ height: maxHeight }}
               >
                 <source src="Pendulum1.mp4" type="video/mp4" />
                 Your browser does not support the video tag.

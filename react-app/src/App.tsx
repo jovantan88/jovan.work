@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import Start from './components/Start.tsx';
 import Introduction from './components/Introduction.tsx';
 import MySkills from './components/MySkills.tsx';
