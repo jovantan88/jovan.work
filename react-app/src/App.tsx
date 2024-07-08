@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import Start from './components/Start.tsx';
 import Introduction from './components/Introduction.tsx';
 import MySkills from './components/MySkills.tsx';
-// import Email from './components/Email.tsx';
+import Email from './components/Email.tsx';
 import Something from './components/Something.tsx';
 // import Education from './components/Education.tsx';
 // import Skills from './components/Skills.tsx';
@@ -65,8 +65,8 @@ function App() {
                 <MySkills />
                 <Projects />
                 <Contact />
-                {/* <Education />
                 <Email />
+                {/* <Education />
                 <Skills />
                 <Experience_old /> */}
                 <Something />
