@@ -22,18 +22,6 @@ const HomeContainer = styled.div`
   }
 `;
 
-const BackgroundImage = styled.div`
-  @media (max-width: 650px) {
-    background-image: url("/engineer_block_mobile.jpeg");
-    background-position: center center;
-    background-size: cover;
-    box-shadow: inset 0 0 0 1000px rgba(0, 0, 0, 0.7);
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-    height: 100%;
-    width: 100%;
-  }
-`;
 
 const TextDiv = styled.div`
   position: absolute;
