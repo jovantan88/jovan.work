@@ -101,7 +101,6 @@ const Start: React.FC = () => {
 
   return (
     <HomeContainer id="01">
-      <BackgroundImage className="fluid"></BackgroundImage>
       <TextDiv>
         <TypewriterText className="josefin-sans">
           <Typewriter
