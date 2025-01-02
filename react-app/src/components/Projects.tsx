@@ -7,7 +7,7 @@ import Col from 'react-bootstrap/Col';
 
 const OuterDiv = styled.div`
   background-color: #000000;
-  padding-top: 200px;
+  padding-top: 50px;
   padding-bottom: 50px;
   margin: 0;
 `;
@@ -101,7 +101,7 @@ function Projects() {
     return (
         <OuterDiv>
             <StyledContainer>
-                <h1 className="text-center text-light josefin-sans my-5 pb-5" data-aos="slide-up">My Projects !</h1>
+                <h1 className="text-center text-light josefin-sans my-5 pb-5" data-aos="slide-up">My Projects!</h1>
 
                 <StyledRow>
                     <StyledCol lg={4} md={6}>
@@ -209,10 +209,10 @@ function Projects() {
                                 <Card.Title>Website about Disabilities</Card.Title>
                                 <Card.Subtitle className="mb-2">Web Development</Card.Subtitle>
                                 <Card.Text>
-                                    A website to gain awareness about learning disabilities and how to help them.
+                                    A very in depth website to gain awareness about learning disabilities and how to help them.
                                 </Card.Text>
-                                <Card.Link href="https://kyourandesu.github.io/learning-disability-website/">Details</Card.Link>
-                                <Card.Link href="https://github.com/kyourandesu/learning-disability-website">GitHub</Card.Link>
+                                <Card.Link href="https://jovantan88.github.io/learning-disability-website/">Details</Card.Link>
+                                <Card.Link href="https://github.com/jovantan88/learning-disability-website">GitHub</Card.Link>
                             </Card.Body>
                         </StyledCard>
                     </StyledCol>
@@ -238,8 +238,7 @@ function Projects() {
                                 <Card.Text>
                                     A project to generate images using different GANs based on CIFAR10 dataset.
                                 </Card.Text>
-                                <Card.Link href="#">Details</Card.Link>
-                                <Card.Link href="#">GitHub</Card.Link>
+                                <Card.Link href="https://github.com/jovantan88/Deep-Learning-School">GitHub</Card.Link>
                             </Card.Body>
                         </StyledCard>
                     </StyledCol>
@@ -269,8 +268,7 @@ function Projects() {
                                 <Card.Text>
                                     Using many different networks to solve the Pendulum environment.
                                 </Card.Text>
-                                <Card.Link href="#">Details</Card.Link>
-                                <Card.Link href="#">GitHub</Card.Link>
+                                <Card.Link href="https://github.com/jovantan88/Deep-Learning-School">GitHub</Card.Link>
                             </Card.Body>
                         </StyledCard>
                     </StyledCol>

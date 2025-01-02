@@ -7,7 +7,9 @@ import Something from './components/Something.tsx';
 // import Education from './components/Education.tsx';
 // import Skills from './components/Skills.tsx';
 // import Experience_old from './components/Experience_old.tsx';
+import Achievements from './components/Achievements.tsx';
 import Projects from './components/Projects.tsx';
+import CurrentlyDoing from './components/CurrentlyDoing.tsx';
 import Contact from './components/Contact.tsx';
 // import BsFoot from './components/BsFoot.tsx';
 import './App.css';
@@ -44,6 +46,11 @@ function App() {
         });
     }, []);
 
+    // get current year
+    const date = new Date();
+    const year = date.getFullYear();
+
+
     return (
         <>
             <link
@@ -63,7 +70,9 @@ function App() {
                 <Start />
                 <Introduction />
                 <MySkills />
+                <Achievements />
                 <Projects />
+                <CurrentlyDoing />
                 <Contact />
                 <Email />
                 {/* <Education />
@@ -76,11 +85,11 @@ function App() {
                             <ul className="nav justify-content-center border-bottom pb-3 mb-3">
                                 <li className="nav-item"><a href="#01" className="footerText nav-link px-2">Home</a></li>
                                 <li className="nav-item"><a href="mailto:jovantanwork@gmail.com" target="_blank" className="footerText nav-link px-2">Email</a></li>
-                                <li className="nav-item"><a href="https://github.com/kyourandesu" target="_blank" className="footerText nav-link px-2">Github</a></li>
+                                <li className="nav-item"><a href="https://github.com/jovantan88" target="_blank" className="footerText nav-link px-2">Github</a></li>
                                 <li className="nav-item"><a href="https://www.linkedin.com/in/jovan-tan-a01143248/" target="_blank" className="footerText nav-link px-2">LinkedIn</a></li>
                                 <li className="nav-item"><a href="tel:89020050" target="_blank" className="footerText nav-link px-2">Message</a></li>
                             </ul>
-                            <p className="footerTextLast text-center">&copy; 2024 Jovan Tan <img className="mx-1 img-fluid footerlogo" src="JT.png"></img></p>
+                            <p className="footerTextLast text-center">&copy; {year} Jovan Tan <img className="mx-1 img-fluid footerlogo" src="JT.png"></img></p>
                         </footer>
                     </div>
                 </div>

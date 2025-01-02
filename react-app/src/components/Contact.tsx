@@ -5,7 +5,7 @@ const ContactWrapper = styled.div`
   text-align: center;
   padding: 20px;
   background-color: #000000;
-  min-height: 70vh; /* Ensure it covers the full viewport height */
+  min-height: 50vh; /* Ensure it covers the full viewport height */
   display: flex;
   flex-direction: column;
   justify-content: center;

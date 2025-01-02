@@ -55,7 +55,7 @@ function Introduction() {
                 Hi, I'm Jovan
             </StyledH1>
             <StyledP className="text-center text-light josefin-sans" data-aos="slide-up">
-                I'm 19 this year and currently pursuing a diploma in Applied AI and Analytics. Coding is my passion and I have an interest in web development and reinforcement learning.
+                I'm 20 this year and currently pursuing a diploma in Applied AI and Analytics. I have an interest in fullstack web development and reinforcement learning. I love to build random projects and learn new things.
             </StyledP>
         </IntroductionDiv>
     );

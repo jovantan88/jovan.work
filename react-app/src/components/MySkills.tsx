@@ -29,6 +29,9 @@ import { SiGooglecloud } from "react-icons/si";
 import { SiTensorflow } from "react-icons/si";
 import { SiPytorch } from "react-icons/si";
 import { AiFillOpenAI } from "react-icons/ai";
+import { RiNextjsFill } from "react-icons/ri";
+import { RiTailwindCssFill } from "react-icons/ri";
+import { RiSupabaseLine } from "react-icons/ri";
 
 const OuterDiv = styled.div`
   background-color: #000000;
@@ -153,11 +156,14 @@ function MySkills() {
               <FieldTitle className="josefin-sans">Frameworks</FieldTitle>
               <SkillIcon_sm><FaReact className="Skill-Icon me-3" />React</SkillIcon_sm>
               <SkillIcon_sm><SiFlask className="Skill-Icon me-3" />Flask</SkillIcon_sm>
+              <SkillIcon_sm><RiNextjsFill className="Skill-Icon me-3" /> Nextjs</SkillIcon_sm>
+              <SkillIcon_sm><RiTailwindCssFill className="Skill-Icon me-3" /> Tailwindcss</SkillIcon_sm>
               <SkillIcon_sm><FaBootstrap className="Skill-Icon me-3" />Bootstrap</SkillIcon_sm>
             </SkillsSection>
             <SkillsSection>
               <FieldTitle className="josefin-sans">Database</FieldTitle>
               <SkillIcon_sm><RiFirebaseLine className="Skill-Icon me-3" />Firebase</SkillIcon_sm>
+              <SkillIcon_sm><RiSupabaseLine className="Skill-Icon me-3" />Supabase</SkillIcon_sm>
               <SkillIcon_sm><SiMysql className="Skill-Icon me-3" />MySQL</SkillIcon_sm>
               <SkillIcon_sm><SiPostgresql className="Skill-Icon me-3" />PostgreSQL</SkillIcon_sm>
             </SkillsSection>
@@ -214,12 +220,11 @@ function MySkills() {
             </SkillsSection>
             <SkillsSection>
               <FieldTitle className="josefin-sans">Networks</FieldTitle>
-              <SkillIcon_sm>Neural Networks</SkillIcon_sm>
               <SkillIcon_sm>Convolutional Neural Networks</SkillIcon_sm>
               <SkillIcon_sm>Recurrent Neural Networks</SkillIcon_sm>
               <SkillIcon_sm>Generative Adversarial Networks</SkillIcon_sm>
-              <SkillIcon_sm>Self-Attention Networks</SkillIcon_sm>
               <SkillIcon_sm>Deep Q Networks</SkillIcon_sm>
+              <SkillIcon_sm>Retrival Augmented Generation</SkillIcon_sm>
             </SkillsSection>
           </Col>
         </StyledRow>
