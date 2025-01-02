@@ -1,5 +1,4 @@
 // src/components/ResumePDF.js
-import React from 'react';
 import styled from 'styled-components';
 
 const PDFContainer = styled.div`

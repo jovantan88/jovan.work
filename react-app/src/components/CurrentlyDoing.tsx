@@ -3,8 +3,18 @@ import React from 'react';
 import styled from 'styled-components';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-// Define your current activities data
-const currentActivities = [
+// 1. Define an interface for Activity
+interface Activity {
+    title: string;
+    description: string;
+    date: string;
+    endDate: string | null; // endDate can be a string or null
+    badgeVariant: 'primary' | 'warning' | 'danger' | 'secondary'; // restrict to specific variants
+    link: string;
+}
+
+// 2. Type the currentActivities array
+const currentActivities: Activity[] = [
     {
         title: 'Machine Learning Engineer Learning Path',
         description: 'Enrolled in a comprehensive course by Google to deepen my understanding of machine learning algorithms, data processing, and model deployment.',
@@ -91,9 +101,9 @@ const CurrentlyDoingSection = styled.section`
     }
 `;
 
-const CurrentlyDoing = () => {
-    // Function to determine if an activity is currently active
-    const isOngoing = (activity) => {
+const CurrentlyDoing: React.FC = () => {
+    // 3. Annotate function parameters with the Activity type
+    const isOngoing = (activity: Activity): boolean => {
         if (!activity.endDate) {
             // Ongoing activities are always active
             return true;
@@ -106,8 +116,7 @@ const CurrentlyDoing = () => {
         return activityEndDate >= today;
     };
 
-    // Function to determine if an activity ended within the last month
-    const isRecentlyEnded = (activity) => {
+    const isRecentlyEnded = (activity: Activity): boolean => {
         if (!activity.endDate) {
             // Ongoing activities are not recently ended
             return false;
@@ -128,25 +137,33 @@ const CurrentlyDoing = () => {
 
     return (
         <CurrentlyDoingSection>
-            <h2 data-aos="fade-up"
+            <h2
+                data-aos="fade-up"
                 data-aos-offset="300"
                 data-aos-delay="0"
                 data-aos-duration="400"
                 data-aos-easing="ease"
                 data-aos-mirror="false"
                 data-aos-once="false"
-                data-aos-anchor-placement="top-bottom" >Currently Doing</h2>
+                data-aos-anchor-placement="top-bottom"
+            >
+                Currently Doing
+            </h2>
             <div className="container">
                 <div className="row">
                     {ongoingActivities.map((activity, index) => (
-                        <div className="col-12 mb-4" key={index} data-aos="fade-up"
-                        data-aos-offset="300"
-                        data-aos-delay="0"
-                        data-aos-duration="400"
-                        data-aos-easing="ease"
-                        data-aos-mirror="false"
-                        data-aos-once="false"
-                        data-aos-anchor-placement="top-bottom" >
+                        <div
+                            className="col-12 mb-4"
+                            key={index}
+                            data-aos="fade-up"
+                            data-aos-offset="300"
+                            data-aos-delay="0"
+                            data-aos-duration="400"
+                            data-aos-easing="ease"
+                            data-aos-mirror="false"
+                            data-aos-once="false"
+                            data-aos-anchor-placement="top-bottom"
+                        >
                             <a href={activity.link} target="_blank" rel="noopener noreferrer">
                                 <div className="card h-100">
                                     <div className="card-body">
