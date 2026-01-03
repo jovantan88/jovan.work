@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Github, Linkedin, Mail, ExternalLink, ChevronDown, Trophy, ChevronLeft, ChevronRight } from "lucide-react";
+import { Github, Linkedin, Mail, ExternalLink, ChevronDown, Trophy, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 import Link from "next/link";
 import Background from "./components/Background";
 import { useEffect, useRef, useState } from "react";
@@ -28,6 +28,7 @@ export default function Home() {
   // Carousel State
   const carouselRef = useRef<HTMLDivElement>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const experiences = [
     {
@@ -296,18 +297,20 @@ export default function Home() {
       <Background />
       
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-6 md:px-12  ">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-6 md:px-12">
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="text-xl font-bold tracking-tighter font-heading"
+          className="text-xl font-bold tracking-tighter font-heading z-50 relative"
         >
           jovan.work
         </motion.div>
+        
+        {/* Desktop Nav */}
         <motion.div 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex gap-6 text-sm font-medium text-zinc-400"
+          className="hidden md:flex gap-6 text-sm font-medium text-zinc-400"
         >
           <Link href="#about" className="hover:text-white transition-colors">About</Link>
           <Link href="#skills" className="hover:text-white transition-colors">Skills</Link>
@@ -315,6 +318,28 @@ export default function Home() {
           <Link href="#projects" className="hover:text-white transition-colors">Projects</Link>
           <Link href="#contact" className="hover:text-white transition-colors">Contact</Link>
         </motion.div>
+
+        {/* Mobile Nav Toggle */}
+        <div className="md:hidden z-50 relative">
+            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-white p-2">
+                {isMobileMenuOpen ? <X /> : <Menu />}
+            </button>
+        </div>
+
+        {/* Mobile Nav Overlay */}
+        {isMobileMenuOpen && (
+            <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="fixed inset-0 bg-black/95 backdrop-blur-xl z-40 flex flex-col items-center justify-center gap-8 text-2xl font-medium text-zinc-400"
+            >
+                <Link href="#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white transition-colors">About</Link>
+                <Link href="#skills" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white transition-colors">Skills</Link>
+                <Link href="#experience" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white transition-colors">Experience</Link>
+                <Link href="#projects" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white transition-colors">Projects</Link>
+                <Link href="#contact" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-white transition-colors">Contact</Link>
+            </motion.div>
+        )}
       </nav>
 
       <main className="w-full">
