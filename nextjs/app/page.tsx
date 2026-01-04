@@ -35,33 +35,48 @@ export default function Home() {
       role: "Full Stack Developer",
       company: "TrailMail (AI EdTech Startup)",
       period: "Dec 2024 - Present",
-      desc: "Architected and designed the entire tech stack, integrating NextJS, FastAPI, and Supabase for an AI EdTech web application, improving speed by 25%. Led a team of 8 developers, conducting weekly SCRUM meetings to manage project sprints and ensure timely delivery. Drove user acquisition to 1000+ active users by developing intuitive UI/UX features.",
+      desc: (
+        <>
+          Currently building the future of EdTech. I architected the entire tech stack (NextJS, FastAPI, Supabase) and lead a team of 8 developers. It&apos;s fast-paced, challenging, and incredibly rewarding to see our user base grow to 1000+ active users. Check it out at{" "}
+          <a href="https://www.supcareer.app" target="_blank" rel="noopener noreferrer" className="text-white underline hover:text-zinc-200">
+            www.supcareer.app
+          </a>
+        </>
+      ),
       skills: ["Next.js", "FastAPI", "Supabase", "Team Leadership", "Scrum"]
     },
     {
       role: "Software Development Intern",
       company: "Industry Platform",
       period: "Mar 2024 - Jan 2025",
-      desc: "Developed a scalable registration site from scratch using Flask and Firebase, integrated with email services and CRM. Automated CRM report scheduling using cron jobs. Created custom Google Sheets features with Apps Script and built an AI-powered business card extractor.",
+      desc: "My first deep dive into professional software dev. I built a registration system from scratch, automated boring CRM tasks with cron jobs, and even built an AI business card extractor. Learned a ton about shipping real production code.",
       skills: ["Flask", "Firebase", "Google Apps Script", "CRM Automation"]
     },
     {
       role: "Freelance Programmer",
       company: "Self-Employed",
       period: "May 2022 - Present",
-      desc: "Provided freelance programming services, delivering responsive web solutions tailored to diverse client needs. Managed 24/7 hosting for client websites, ensuring continuous availability and optimal performance.",
+      desc: "Where it all started. I help clients bring their ideas to the web, handling everything from the initial design to 24/7 hosting. It taught me how to manage projects, communicate with clients, and deliver on time.",
       skills: ["Web Development", "Hosting", "Client Management"]
     }
   ];
 
   const originalProjects = [
     {
+        title: "Personal Book Reader",
+        category: "Full Stack Web App",
+        desc: "Built to solve the problem of ad-cluttered reading sites. This platform extracts text from PDFs, Word docs, and EPUBs for a clean, customizable experience. Integrated Kokoro and Piper for natural-sounding AI Text-to-Speech. When I see a problem, I build the solution.",
+        tags: ["Next.js", "Firebase", "AI TTS", "Kokoro"],
+        link: "https://book-app--pbook-c9fc1.asia-southeast1.hosted.app/",
+        gradient: "from-violet-500/20 to-purple-900/20"
+    },
+    {
         title: "HackoMania",
         category: "Hackathon",
         desc: "Awarded Special Mention for developing a web extension and application that dynamically injects event maps into subreddits. Integrated GitHub authentication and chat for collaborative features.",
         tags: ["Web Extension", "Next.js", "Hackathon"],
-        link: "https://github.com/jovantan88", 
-        code: "https://github.com/jovantan88",
+        link: "https://hack-o-mania-ongod.vercel.app/", 
+        code: "https://github.com/jovantan88/HackOMania-Ongod",
         gradient: "from-pink-500/20 to-rose-900/20"
     },
     {
@@ -87,8 +102,6 @@ export default function Home() {
         category: "Cybersecurity / AI",
         desc: "Achieved 5th Place in the GovTech AI Capture The Flag competition, showcasing advanced AI and problem-solving abilities in a security context.",
         tags: ["AI", "Cybersecurity", "CTF"],
-        link: "https://github.com/jovantan88",
-        code: "https://github.com/jovantan88",
         gradient: "from-red-500/20 to-red-900/20"
     },
     {
@@ -363,14 +376,15 @@ export default function Home() {
               variants={fadeInUp}
               className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50 font-heading"
             >
-              Data | AI | <br /> Full Stack
+              Building Solutions <br /> for Real Problems
             </motion.h1>
             
             <motion.p 
               variants={fadeInUp}
               className="text-lg md:text-xl text-zinc-400 max-w-2xl mb-12 leading-relaxed"
             >
-              Building digital experiences with a focus on Machine Learning, Data Analytics, and Web Development.
+              Hey, I'm Jovan! I bridge the gap between complex AI systems and intuitive user experiences. 
+              Let's turn data into something tangible.
             </motion.p>
             
             <motion.div variants={fadeInUp} className="flex gap-4">
@@ -409,8 +423,9 @@ export default function Home() {
                 <div className="space-y-6">
                   <h2 className="text-3xl font-bold font-heading">About Me</h2>
                   <p className="text-zinc-400 leading-relaxed">
-                    Hi, I'm Jovan. I'm 19 this year and currently pursuing a diploma in Applied AI and Analytics. 
-                    Coding is my passion and I have an interest in web development and reinforcement learning.
+                    I'm a 19-year-old developer who loves figuring out how things work. Currently, I'm deep diving into 
+                    Applied AI & Analytics, but my curiosity takes me everywhere—from full-stack web dev to the 
+                    complexities of Reinforcement Learning. I build to learn, and I learn to build better.
                   </p>
                 </div>
                 <div className="relative group">
@@ -551,7 +566,7 @@ export default function Home() {
                 <div>
                   <h2 className="text-3xl font-bold mb-4 font-heading">Selected Works</h2>
                   <p className="text-zinc-400 max-w-md">
-                    A collection of projects that I've worked on, ranging from web development to machine learning.
+                    Here's a mix of my professional work, hackathon wins, and side projects where I explore new tech.
                   </p>
                 </div>
                 
@@ -632,10 +647,10 @@ export default function Home() {
 
             {/* Contact Section */}
             <section id="contact" className="w-full max-w-2xl py-20 md:py-32 text-center">
-              <h2 className="text-3xl font-bold mb-6 font-heading">Get In Touch</h2>
+              <h2 className="text-3xl font-bold mb-6 font-heading">Let's Chat</h2>
               <p className="text-zinc-400 mb-8">
-                I'm currently looking for new opportunities, my inbox is always open. 
-                Whether you have a question or just want to say hi, I'll try my best to get back to you!
+                I'm always open to discussing new projects, creative ideas, or opportunities to be part of your visions. 
+                If you want to build something cool or just talk tech, drop me a line!
               </p>
               <a 
                 href="mailto:jovantanwork@gmail.com"
