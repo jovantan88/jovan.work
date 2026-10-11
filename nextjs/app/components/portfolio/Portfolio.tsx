@@ -119,7 +119,7 @@ export default function Portfolio() {
           <div className={styles.heroLayout}>
             <div className={styles.heroCopy}>
               <p className={styles.eyebrow}><span className={styles.locationDot} /> Singapore · NUS Business AI Systsems</p>
-              <h1 id="hello-heading">hey, i’m <em>Jovan.</em><span className={styles.helloStar} aria-hidden="true">✳</span></h1>
+              <h1 id="hello-heading">hey, i’m <em>Jovan.</em><span className={styles.helloStar} aria-hidden="true">✳︎</span></h1>
               <p className={styles.heroDescription}>welcome to my little larp corner of the internet.</p>
               <a href="#work" className={styles.textLink}>take a look around <ArrowUpRight size={18} aria-hidden="true" /></a>
             </div>
@@ -242,7 +242,7 @@ export default function Portfolio() {
 
         <section id="contact" tabIndex={-1} className={`${styles.section} ${styles.contact}`} aria-labelledby="contact-heading">
           <div className={styles.contactInner}>
-            <span className={styles.contactStar} aria-hidden="true">✳</span>
+            <span className={styles.contactStar} aria-hidden="true">✳︎</span>
             <p className={styles.eyebrow}>04 / good things start with a hello</p>
             <h2 id="contact-heading">say <em>hello</em></h2>
             <p>want to do a hackathon? recruiting? or just want to chat?<br /> i'm always open to new opportunities!</p>

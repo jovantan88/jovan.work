@@ -71,7 +71,7 @@
 .heroCopy > .eyebrow { color: var(--muted); margin-bottom: 26px; font-size: 10px; }
 .hero h1 { position: relative; font-size: clamp(62px, 6.6vw, 98px); line-height: 1.04; letter-spacing: -.05em; white-space: nowrap; }
 .hero h1 em { color: var(--rust); }
-.helloStar { display: inline-block; color: var(--olive); font-family: Georgia, serif; font-size: .36em; position: relative; top: -.95em; margin-left: .3em; rotate: -12deg; }
+.helloStar { display: inline-block; color: var(--olive); font-family: Georgia, serif; font-size: .36em; position: relative; top: -.95em; margin-left: .3em; rotate: -12deg; font-variant-emoji: text; }
 .heroSubtitle { font: italic clamp(28px, 3vw, 43px)/1.15 var(--serif); letter-spacing: -.025em; margin-top: 27px; }
 .heroSubtitle span { color: var(--olive); }
 .heroDescription { color: var(--muted); font-size: 15px; line-height: 1.8; margin-top: 28px; }
@@ -180,7 +180,7 @@
 
 .contact { background: #e9ecda; text-align: center; padding-bottom: 25px; }
 .contactInner { margin: auto 0; padding: 35px 0 80px; }
-.contactStar { display: inline-block; font: 58px/1 Georgia,serif; color: var(--olive); margin-bottom: 36px; transition: rotate .5s; }
+.contactStar { display: inline-block; font: 58px/1 Georgia,serif; color: var(--olive); margin-bottom: 36px; transition: rotate .5s; font-variant-emoji: text; }
 .contactStar:hover { rotate: 100deg; }
 .contact .eyebrow { justify-content: center; }
 .contact h2 { font-size: clamp(65px, 7.6vw, 110px); margin-top: 28px; }
