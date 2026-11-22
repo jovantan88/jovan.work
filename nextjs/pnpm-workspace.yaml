@@ -1,14 +1,17 @@
 packages:
   - .
-allowBuilds:
-  '@met4citizen/headtts': set this to true or false
-  onnxruntime-node: set this to true or false
-  protobufjs: set this to true or false
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
 # These packages ship optional native/postinstall build scripts we don't need
 # for a browser-first app (inference runs via onnxruntime-web / WASM in the
-# client). Intentionally skipped so `pnpm install` doesn't error.
+# client). Intentionally skipped so `pnpm install` doesn't error: onnxruntime-node's
+# script downloads CUDA binaries, and that download fails on CI.
+# allowBuilds is pnpm 11's setting; ignoredBuiltDependencies covers pnpm 10.
+# package.json pins pnpm@11.9.0 so CI (Vercel) installs with the same pnpm as here.
+allowBuilds:
+  '@met4citizen/headtts': false
+  onnxruntime-node: false
+  protobufjs: false
+  sharp: false
+  unrs-resolver: false
 ignoredBuiltDependencies:
   - '@met4citizen/headtts'
   - onnxruntime-node
