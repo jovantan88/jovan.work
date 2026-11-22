@@ -1,0 +1,267 @@
+/* jovan.work v6: ink on paper, rendered in text.
+   The ASCII stage (a fixed canvas) draws every backdrop; sections are see-through once it runs. */
+
+.site {
+  --paper: #f1ece1;
+  --ink: #16140f;
+  --rust: #b4532a;
+  --rust-lit: #e07a45;
+  --muted: #6d675b;
+  --rule: rgba(22, 20, 15, 0.16);
+  --display: var(--font-display), "Instrument Serif", Georgia, serif;
+  --mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --gutter: clamp(20px, 5vw, 80px);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 14px/1.7 var(--mono);
+  overflow-x: clip;
+}
+.site ::selection { background: var(--ink); color: var(--paper); }
+/* Resets live in :where() so they never outrank component classes. */
+:where(.site) a { color: inherit; text-decoration: none; }
+:where(.site) button { font: inherit; color: inherit; cursor: pointer; }
+:where(.site) ul, :where(.site) ol { list-style: none; margin: 0; padding: 0; }
+.site :focus-visible { outline: 2px solid var(--rust); outline-offset: 4px; border-radius: 0; }
+
+.stage { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; pointer-events: none; opacity: 0; transition: opacity 0.5s ease; }
+.site[data-stage="on"] .stage { opacity: 1; }
+.main { position: relative; z-index: 1; }
+.main:focus { outline: none; }
+
+/* ── HUD ─────────────────────────────────────────────────────────── */
+.topbar {
+  --hud-fg: var(--ink);
+  --hud-bg: var(--paper);
+  position: fixed; inset: 0 0 auto; z-index: 50;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
+  height: 64px; padding: 0 var(--gutter);
+  color: var(--hud-fg);
+  background: color-mix(in srgb, var(--hud-bg) 80%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid color-mix(in srgb, var(--hud-fg) 14%, transparent);
+  /* Only the text colour transitions: Chrome restarts color-mix() transitions on every
+     style recalc, and the journey restyles its cards every frame, so they would never finish. */
+  transition: color 0.3s;
+}
+:global(html[data-ink-top]) .topbar { --hud-fg: var(--paper); --hud-bg: var(--ink); }
+.wordmark { justify-self: start; display: inline-flex; align-items: center; gap: 2px; font: italic 27px/1 var(--display); letter-spacing: -0.01em; }
+.wordmark span { opacity: 0.5; }
+.wordmark svg { margin-left: 6px; color: var(--rust); transition: rotate 0.5s var(--ease); }
+.wordmark:hover svg { rotate: 90deg; }
+.actLabel { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; }
+.actLabel b { font-weight: 400; color: var(--rust); }
+:global(html[data-ink-top]) .actLabel b { color: var(--rust-lit); }
+.nav { justify-self: end; display: flex; gap: 28px; }
+.nav a { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; position: relative; padding: 8px 0; }
+.nav a::after { content: ""; position: absolute; left: 0; right: 0; bottom: 3px; height: 1px; background: currentColor; scale: 0 1; transform-origin: left; transition: scale 0.3s var(--ease); }
+.nav a:hover::after, .nav a[aria-current]::after { scale: 1 1; }
+.nav a:last-child { color: var(--rust); }
+:global(html[data-ink-top]) .nav a:last-child { color: var(--rust-lit); }
+.menuButton { display: none; background: none; border: 0; padding: 10px 0 10px 10px; font-size: 12px; align-items: center; gap: 6px; }
+
+.bottombar {
+  --hud-fg: var(--ink);
+  --hud-bg: var(--paper);
+  position: fixed; inset: auto 0 0; z-index: 50;
+  display: flex; justify-content: space-between; gap: 16px;
+  padding: 0 var(--gutter) 12px;
+  font-size: 10.5px; letter-spacing: 0.04em; white-space: pre;
+  color: var(--hud-fg); pointer-events: none;
+}
+.bottombar > span { padding: 3px 7px; background: color-mix(in srgb, var(--hud-bg) 82%, transparent); }
+:global(html[data-ink-bottom]) .bottombar { --hud-fg: var(--paper); --hud-bg: var(--ink); }
+
+/* ── Shared ──────────────────────────────────────────────────────── */
+.section { position: relative; min-height: 100svh; padding: 104px var(--gutter) 72px; display: flex; flex-direction: column; }
+.sectionHead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+.sectionHead b { font-weight: 400; color: var(--rust); }
+.sectionHead > span:last-child { color: var(--muted); }
+.display { font: 400 clamp(44px, 6.2vw, 104px)/0.95 var(--display); letter-spacing: -0.025em; text-wrap: balance; margin-top: clamp(28px, 6vh, 64px); max-width: 13ch; }
+.display em { font-style: italic; color: var(--rust); }
+.prompt { color: var(--rust); }
+.prompt::after { content: "_"; margin-left: 2px; animation: blink 1.05s steps(1) infinite; }
+.caret { animation: blink 1.05s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+.site[data-js] [data-reveal] { transition: opacity 0.9s var(--ease), transform 0.9s var(--ease); }
+.site[data-js] [data-reveal]:not(.in) { opacity: 0; transform: translateY(26px); }
+.in { opacity: 1; }
+
+/* ── 01 hello ────────────────────────────────────────────────────── */
+.hero { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 1fr auto; column-gap: 24px; padding-top: 88px; padding-bottom: 26px; }
+.heroCopy { grid-column: 1 / span 7; grid-row: 1; align-self: center; position: relative; z-index: 1; }
+.kicker { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--rust); margin-bottom: 26px; }
+.heroTitle { font: 400 clamp(64px, 10.4vw, 186px)/0.84 var(--display); letter-spacing: -0.04em; }
+.heroTitle span { display: block; }
+.heroTitle em { font-style: italic; color: var(--rust); }
+/* the name runs larger, so its ASCII letters are tall enough to read, and sits a little lower:
+   at this line height the tops of J and T would run up under the descenders of "hey," */
+.heroName { font-size: 1.35em; margin-top: 0.14em; }
+/* once the stage draws the name in ASCII, the real text stays in place but invisible */
+:global(html[data-ascii-name]) .heroName, :global(html[data-ascii-name]) .heroName em { color: transparent; }
+.lede { max-width: 44ch; margin-top: 34px; color: var(--muted); }
+.ctas { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 34px; }
+.btnInk, .btnLine { display: inline-flex; align-items: center; gap: 10px; padding: 13px 18px; font-size: 12px; letter-spacing: 0.04em; border: 1px solid var(--ink); transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+.btnInk { background: var(--ink); color: var(--paper); }
+.btnInk:hover { background: var(--rust); border-color: var(--rust); }
+.btnLine { background: color-mix(in srgb, var(--paper) 70%, transparent); }
+.btnLine:hover { background: var(--ink); color: var(--paper); }
+.portrait { grid-column: 7 / -1; grid-row: 1 / span 2; align-self: end; height: min(86svh, 880px); margin-bottom: -26px; }
+.heroMeta { grid-column: 1 / span 7; grid-row: 2; display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding-bottom: 28px; }
+
+/* ── 02 about ────────────────────────────────────────────────────── */
+.aboutGrid { flex: 1; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(32px, 6vw, 96px); align-items: center; padding-top: 12px; }
+.terminal { margin-top: 40px; max-width: 640px; border: 1px solid var(--ink); background: color-mix(in srgb, var(--paper) 88%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.termTabs { display: flex; border-bottom: 1px solid var(--ink); }
+.termTabs button { flex: 1; padding: 9px 12px; font-size: 11px; text-align: left; background: none; border: 0; border-right: 1px solid var(--ink); color: var(--muted); transition: background-color 0.2s, color 0.2s; }
+.termTabs button:last-child { border-right: 0; }
+.termTabs button:hover { color: var(--ink); }
+.termTabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.termBody { padding: 18px 22px 22px; min-height: 250px; }
+.termBody > p:nth-child(2) { margin-top: 10px; font-size: 13.5px; }
+.termBody a { text-decoration: underline; text-underline-offset: 3px; color: var(--rust); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.chips li { font-size: 10.5px; padding: 1px 8px; border: 1px solid var(--rule); }
+.aboutSide { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.cube { width: min(100%, 54svh, 540px); aspect-ratio: 1; }
+.stats { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); }
+.stats > div { display: flex; flex-direction: column-reverse; padding: 12px 10px 10px; border-right: 1px solid var(--rule); background: color-mix(in srgb, var(--paper) 82%, transparent); }
+.stats > div:last-child { border-right: 0; }
+.stats dd { margin: 0; font: 400 clamp(36px, 3.4vw, 54px)/1 var(--display); letter-spacing: -0.02em; }
+.stats dt { font-size: 10px; line-height: 1.4; color: var(--muted); margin-top: 6px; }
+
+/* ── 03 experience (inverted, pinned, alternating stops) ───────── */
+/* Height is set inline from journeyMath.ts; the inner stage sticks while the stops change. */
+.experience { position: relative; color: var(--paper); --muted: #a39c8d; --rule: rgba(241, 236, 225, 0.22); }
+.site:not([data-stage="on"]) .experience { background: var(--ink); }
+.experience .sectionHead b, .experience .display em { color: var(--rust-lit); }
+.journey { position: sticky; top: 0; height: 100svh; overflow: hidden; padding: 104px var(--gutter) 0; }
+/* solid backing, so the backdrop behind the label never reads as a strikethrough */
+.journey > .sectionHead { position: relative; z-index: 3; }
+.journey > .sectionHead > span { background: var(--ink); box-shadow: 0 0 0 6px var(--ink); }
+.journeyIntro { position: relative; z-index: 2; will-change: transform, opacity; }
+.journeyHint { display: inline-flex; align-items: center; gap: 8px; margin-top: 22px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.journeyHint svg { animation: nudge 1.6s var(--ease) infinite; }
+@keyframes nudge { 50% { translate: 0 4px; } }
+
+.rail { position: absolute; left: var(--gutter); bottom: 56px; z-index: 3; width: min(50vw, 600px); font-size: 10.5px; letter-spacing: 0.04em; }
+.railTrack { position: relative; display: block; height: 1px; margin-bottom: 12px; background: var(--rule); }
+.railFill { position: absolute; inset: 0; background: var(--rust-lit); transform-origin: left; transform: scaleX(0); }
+.rail ol { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 14px; }
+.rail li { display: grid; gap: 3px; color: var(--muted); background: var(--ink); box-shadow: 0 0 0 4px var(--ink); transition: color 0.3s, translate 0.3s var(--ease); }
+.rail li b { font-weight: 400; }
+.rail li[data-active] { color: var(--paper); translate: 0 -3px; }
+.rail li[data-active] b { color: var(--rust-lit); }
+.journeyCount { position: absolute; right: var(--gutter); bottom: 48px; z-index: 3; font: 400 clamp(36px, 4vw, 64px)/1 var(--display); letter-spacing: -0.02em; color: var(--paper); }
+.journeyCount span { font-style: italic; }
+
+.stops { position: absolute; inset: 0; z-index: 1; perspective: 1600px; pointer-events: none; }
+.stops > li { display: contents; }
+.stopCard { position: absolute; left: 50%; top: 50%; width: min(38vw, 470px); padding: 22px 26px 26px; background: rgba(22, 20, 15, 0.86); border: 1px solid rgba(241, 236, 225, 0.32); will-change: transform, opacity; opacity: 0; }
+/* each card is hinged on its outer edge */
+.stopCard[data-side="left"] { transform-origin: 0% 50%; }
+.stopCard[data-side="right"] { transform-origin: 100% 50%; }
+.stopMeta { display: flex; justify-content: space-between; gap: 12px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rust-lit); }
+.stopCard h3 { font: 400 clamp(32px, 3vw, 46px)/1.02 var(--display); letter-spacing: -0.015em; margin-top: 16px; }
+.role { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.stopCard > p:not(.role) { margin-top: 14px; font-size: 13px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.tags li { font-size: 10.5px; padding: 1px 8px; border: 1px solid var(--rule); color: var(--muted); }
+.stopLink { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 12px; border-bottom: 1px solid currentColor; }
+
+/* ── 04 work ─────────────────────────────────────────────────────── */
+.workHead { display: flex; justify-content: space-between; align-items: end; gap: 32px; }
+.workHead > p { max-width: 28ch; color: var(--muted); font-size: 12px; padding-bottom: 8px; }
+.projects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 44px; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
+.project { display: flex; flex-direction: column; min-height: 250px; padding: 18px 22px 20px; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: color-mix(in srgb, var(--paper) 84%, transparent); transition: background-color 0.25s, color 0.25s; }
+.project:hover { background: var(--ink); color: var(--paper); }
+.projectMeta { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.projectMeta > span:last-child { color: var(--rust); }
+.project:hover .projectMeta { color: #a39c8d; }
+.project:hover .projectMeta > span:last-child, .project:hover .projectLinks a { color: var(--rust-lit); }
+.project h3 { font: 400 clamp(26px, 2.3vw, 36px)/1.02 var(--display); letter-spacing: -0.015em; margin-top: 26px; }
+.project > p { margin-top: 12px; font-size: 12.5px; flex: 1; }
+.projectLinks { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 18px; font-size: 11px; }
+.projectLinks a { display: inline-flex; align-items: center; gap: 4px; color: var(--rust); }
+.projectLinks a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.log { margin-top: 56px; max-width: 780px; padding: 18px 22px; background: color-mix(in srgb, var(--paper) 90%, transparent); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); border: 1px solid var(--ink); }
+.log ul { margin-top: 12px; border-top: 1px solid var(--rule); }
+.log li { display: grid; grid-template-columns: 56px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 12.5px; }
+.log li > span:first-child { color: var(--muted); }
+.log li a { display: inline-flex; align-items: center; gap: 6px; }
+.log li a:hover { color: var(--rust); }
+.more { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 12px; color: var(--rust); }
+
+/* ── 05 contact ──────────────────────────────────────────────────── */
+.contact { text-align: center; padding-bottom: 52px; }
+.contactInner { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 0 40px; }
+.hand { width: min(38svh, 360px); aspect-ratio: 1; }
+.contactTitle { font: 400 clamp(76px, 13vw, 224px)/0.84 var(--display); letter-spacing: -0.045em; margin-top: -1vh; }
+.contactTitle em { font-style: italic; color: var(--rust); }
+.contactInner > p { max-width: 46ch; color: var(--muted); margin-top: 26px; }
+.email { display: inline-flex; align-items: center; gap: 14px; margin-top: 30px; padding: 15px 24px; font-size: clamp(13px, 1.3vw, 17px); border: 1px solid var(--ink); background: color-mix(in srgb, var(--paper) 80%, transparent); transition: background-color 0.2s, color 0.2s; }
+.email:hover { background: var(--ink); color: var(--paper); }
+.socials { display: flex; justify-content: center; gap: 26px; margin-top: 22px; font-size: 12px; }
+.socials a { display: inline-flex; align-items: center; gap: 4px; padding: 6px 0; }
+.socials a:hover { color: var(--rust); }
+.footer { display: flex; justify-content: space-between; gap: 16px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 10.5px; color: var(--muted); text-align: left; }
+.footer a { display: inline-flex; align-items: center; gap: 6px; }
+.footer a:hover { color: var(--ink); }
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .projects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .topbar { grid-template-columns: 1fr auto; }
+  .actLabel { display: none; }
+  .bottombar { display: none; }
+  .hero { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; padding-top: 96px; }
+  .heroCopy { grid-column: 1; grid-row: 1; }
+  .portrait { grid-column: 1; grid-row: 2; height: 56svh; margin: 18px 0 0; }
+  .heroMeta { grid-column: 1; grid-row: 3; padding: 18px 0 0; }
+  .aboutGrid { grid-template-columns: minmax(0, 1fr); }
+  .cube { width: min(100%, 44svh); }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats > div:nth-child(2) { border-right: 0; }
+  .stats > div:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
+  .rail { display: none; }
+  .journeyCount { bottom: 24px; font-size: 34px; }
+  .stopCard { width: min(88vw, 500px); }
+  .workHead { flex-direction: column; align-items: start; gap: 12px; }
+  .footer { flex-direction: column; gap: 6px; }
+}
+
+@media (max-width: 640px) {
+  .topbar { height: 58px; }
+  .wordmark { font-size: 24px; }
+  .menuButton { display: inline-flex; }
+  /* justify-self back to stretch: an absolutely placed grid item would otherwise shrink to the end */
+  .nav { display: none; justify-self: stretch; position: absolute; top: 58px; left: 0; right: 0; flex-direction: column; gap: 0; padding: 8px var(--gutter) 18px; background: var(--hud-bg); border-bottom: 1px solid color-mix(in srgb, var(--hud-fg) 14%, transparent); }
+  .navOpen { display: flex; }
+  .nav a { padding: 12px 0; font-size: 14px; }
+  .nav a::after { display: none; }
+  .section { padding-top: 88px; padding-bottom: 56px; }
+  .sectionHead { flex-direction: column; gap: 2px; }
+  .heroTitle { font-size: clamp(54px, 17vw, 96px); }
+  .stopCard { padding: 16px 18px 18px; }
+  .stopCard h3 { font-size: clamp(28px, 8.4vw, 34px); margin-top: 10px; }
+  .stopCard > p:not(.role) { margin-top: 10px; font-size: 12.5px; line-height: 1.6; }
+  .tags { margin-top: 12px; }
+  .stopLink { margin-top: 12px; }
+  .project { background: color-mix(in srgb, var(--paper) 93%, transparent); }
+  .workHead > p { background: color-mix(in srgb, var(--paper) 86%, transparent); }
+  .termTabs button { padding: 9px 8px; font-size: 10.5px; }
+  .projects { grid-template-columns: minmax(0, 1fr); }
+  .project { min-height: 0; }
+  .log li { grid-template-columns: 44px 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site[data-js] [data-reveal]:not(.in) { opacity: 1; transform: none; }
+  .site [data-reveal], .stage { transition: none; }
+  .caret, .prompt::after, .journeyHint svg { animation: none; }
+}

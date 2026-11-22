@@ -5,7 +5,6 @@ import { MotionConfig } from "framer-motion";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import InteractiveBackground from "./InteractiveBackground";
-import PortfolioScroll from "./portfolio/PortfolioScroll";
 
 export default function SmoothScroll({
   children,
@@ -24,8 +23,23 @@ export default function SmoothScroll({
     return () => mq.removeEventListener("change", update);
   }, []);
 
+  // The ASCII home page draws its own backdrop and wants continuous scroll (no snapping),
+  // so its transforms track the wheel exactly.
   if (pathname === "/") {
-    return <MotionConfig reducedMotion="user"><PortfolioScroll />{children}</MotionConfig>;
+    return (
+      <MotionConfig reducedMotion="user">
+        <ReactLenis
+          root
+          options={{
+            lerp: reduced ? 1 : 0.1,
+            smoothWheel: !reduced,
+            anchors: reduced ? { offset: 0, immediate: true } : { offset: 0 },
+          }}
+        >
+          {children}
+        </ReactLenis>
+      </MotionConfig>
+    );
   }
 
   return (

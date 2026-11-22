@@ -203,6 +203,14 @@ export type Experience = {
 
 export const EXPERIENCES: Experience[] = [
   {
+    role: "Full Stack Engineer",
+    company: "PitchMe",
+    period: "Nov 2026 — Present",
+    desc:
+      "Where I am now. Building across the full stack, from the interface down to the backend.",
+    skills: ["Full-stack engineering"],
+  },
+  {
     role: "Chief Technology Officer",
     company: "'Sup (AI EdTech startup)",
     period: "Dec 2024 — Jun 2026",
