@@ -172,21 +172,51 @@
 .stopLink { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 12px; border-bottom: 1px solid currentColor; }
 
 /* ── 04 work ─────────────────────────────────────────────────────── */
-.workHead { display: flex; justify-content: space-between; align-items: end; gap: 32px; }
-.workHead > p { max-width: 28ch; color: var(--muted); font-size: 12px; padding-bottom: 8px; }
-.projects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 44px; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); }
-.project { display: flex; flex-direction: column; min-height: 250px; padding: 18px 22px 20px; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); background: color-mix(in srgb, var(--paper) 84%, transparent); transition: background-color 0.25s, color 0.25s; }
-.project:hover { background: var(--ink); color: var(--paper); }
-.projectMeta { display: flex; justify-content: space-between; gap: 12px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.projectMeta > span:last-child { color: var(--rust); }
-.project:hover .projectMeta { color: #a39c8d; }
-.project:hover .projectMeta > span:last-child, .project:hover .projectLinks a { color: var(--rust-lit); }
-.project h3 { font: 400 clamp(26px, 2.3vw, 36px)/1.02 var(--display); letter-spacing: -0.015em; margin-top: 26px; }
-.project > p { margin-top: 12px; font-size: 12.5px; flex: 1; }
-.projectLinks { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 18px; font-size: 11px; }
-.projectLinks a { display: inline-flex; align-items: center; gap: 4px; color: var(--rust); }
-.projectLinks a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.log { margin-top: 56px; max-width: 780px; padding: 18px 22px; background: color-mix(in srgb, var(--paper) 90%, transparent); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); border: 1px solid var(--ink); }
+/* Pinned like the journey: the track's height is set inline from deckMath.ts, and the stage
+   draws a full-screen print for each sheet behind the cards. */
+.work { position: relative; padding: 0 0 72px; display: flex; flex-direction: column; }
+.work > .log { margin-left: var(--gutter); margin-right: var(--gutter); }
+.deckTrack { position: relative; }
+.deck { --card-w: min(34vw, 440px); --card-gap: clamp(28px, 4.5vw, 80px); position: sticky; top: 0; height: 100svh; overflow: hidden; padding: 104px var(--gutter) 0; }
+.deck > .sectionHead { position: relative; z-index: 3; }
+.deck > .sectionHead > span { background: var(--paper); box-shadow: 0 0 0 6px var(--paper); }
+.deckPrint { position: absolute; top: 132px; bottom: 150px; right: var(--gutter); left: calc(var(--gutter) + var(--card-w) + var(--card-gap)); pointer-events: none; }
+.deckCover { position: relative; z-index: 2; will-change: transform, opacity; }
+.deckCover .display { max-width: 12ch; }
+.deckLede { max-width: 34ch; margin-top: 22px; color: var(--muted); font-size: 13px; }
+.deckLede, .deckCover .journeyHint { background: var(--paper); box-shadow: 0 0 0 5px var(--paper); }
+.deckCover .journeyHint { display: flex; width: max-content; }
+.deckSheets { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.deckSheets > li { position: absolute; left: var(--gutter); top: 150px; bottom: 112px; width: var(--card-w); display: flex; align-items: center; }
+.sheetCard { width: 100%; padding: 20px 24px 22px; background: color-mix(in srgb, var(--paper) 95%, transparent); border: 1px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); opacity: 0; visibility: hidden; will-change: transform, opacity; }
+.sheetMeta { display: flex; justify-content: space-between; gap: 12px; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.sheetMeta > span:first-child { color: var(--rust); white-space: nowrap; }
+.sheetMeta > span:last-child { text-align: right; }
+.sheetCard h3 { font: 400 clamp(38px, 3.6vw, 60px)/0.98 var(--display); letter-spacing: -0.025em; margin-top: 18px; text-wrap: balance; }
+.sheetCard h3 em { display: block; font-size: 0.5em; line-height: 1.15; margin-top: 6px; color: var(--rust); }
+.sheetCard > p { margin-top: 14px; font-size: 13px; }
+.sheetTags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.sheetTags li { font-size: 10.5px; padding: 1px 8px; border: 1px solid var(--rule); color: var(--muted); }
+.sheetLinks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; margin-top: 18px; font-size: 12px; }
+.sheetLinks a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+.sheetLinks a:first-child { background: var(--ink); color: var(--paper); padding: 0 14px; transition: background-color 0.2s; }
+.sheetLinks a:first-child:hover { background: var(--rust); }
+.sheetLinks a:not(:first-child):hover { color: var(--rust); }
+.deckRail { position: absolute; left: var(--gutter); bottom: 50px; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px 20px; max-width: 62vw; font-size: 10.5px; letter-spacing: 0.04em; opacity: 0; }
+.deckRail button { padding: 4px 0; border: 0; background: var(--paper); box-shadow: 0 0 0 4px var(--paper); color: var(--muted); transition: color 0.3s, translate 0.3s var(--ease); }
+.deckRail button b { font-weight: 400; }
+.deckRail button:hover { color: var(--ink); }
+.deckRail button[data-active] { color: var(--ink); translate: 0 -3px; }
+.deckRail button[data-active] b { color: var(--rust); }
+.deckCount { position: absolute; right: var(--gutter); bottom: 44px; z-index: 3; font: 400 clamp(36px, 4vw, 64px)/1 var(--display); letter-spacing: -0.02em; background: var(--paper); box-shadow: 0 0 0 6px var(--paper); opacity: 0; }
+.deckCount span { font-style: italic; }
+/* night over the landscape: the chrome that sits on the sky turns to ink */
+.deck[data-night] > .sectionHead, .deck[data-night] .deckRail button, .deck[data-night] .deckCount { color: var(--paper); }
+.deck[data-night] > .sectionHead > span, .deck[data-night] .deckRail button, .deck[data-night] .deckCount { background: var(--ink); box-shadow: 0 0 0 6px var(--ink); }
+.deck[data-night] > .sectionHead { border-color: rgba(241, 236, 225, 0.22); }
+.deck[data-night] > .sectionHead > span:last-child, .deck[data-night] .deckRail button:not([data-active]) { color: #a39c8d; }
+.deck[data-night] > .sectionHead b, .deck[data-night] .deckRail button[data-active] b { color: var(--rust-lit); }
+.log { scroll-margin-top: 86px; margin-top: 40px; max-width: 780px; padding: 18px 22px; background: color-mix(in srgb, var(--paper) 90%, transparent); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); border: 1px solid var(--ink); }
 .log ul { margin-top: 12px; border-top: 1px solid var(--rule); }
 .log li { display: grid; grid-template-columns: 56px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 12.5px; }
 .log li > span:first-child { color: var(--muted); }
@@ -211,10 +241,6 @@
 .footer a:hover { color: var(--ink); }
 
 /* ── Responsive ──────────────────────────────────────────────────── */
-@media (max-width: 1100px) {
-  .projects { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
 @media (max-width: 900px) {
   .topbar { grid-template-columns: 1fr auto; }
   .actLabel { display: none; }
@@ -231,7 +257,11 @@
   .rail { display: none; }
   .journeyCount { bottom: 24px; font-size: 34px; }
   .stopCard { width: min(88vw, 500px); }
-  .workHead { flex-direction: column; align-items: start; gap: 12px; }
+  .deckRail { display: none; }
+  .deckCount { bottom: 22px; font-size: 34px; }
+  .deckPrint { left: var(--gutter); top: 0; bottom: 0; }
+  .deckSheets > li { top: auto; bottom: 76px; right: var(--gutter); width: auto; display: block; }
+  .sheetCard { box-shadow: 4px 4px 0 var(--ink); }
   .footer { flex-direction: column; gap: 6px; }
 }
 
@@ -252,12 +282,22 @@
   .stopCard > p:not(.role) { margin-top: 10px; font-size: 12.5px; line-height: 1.6; }
   .tags { margin-top: 12px; }
   .stopLink { margin-top: 12px; }
-  .project { background: color-mix(in srgb, var(--paper) 93%, transparent); }
-  .workHead > p { background: color-mix(in srgb, var(--paper) 86%, transparent); }
+  .sheetCard { padding: 14px 16px 16px; }
+  .sheetCard h3 { font-size: clamp(30px, 9vw, 40px); margin-top: 10px; }
+  .sheetCard > p { margin-top: 8px; font-size: 12.5px; line-height: 1.55; }
+  .sheetTags { margin-top: 10px; }
+  .sheetLinks { margin-top: 10px; }
   .termTabs button { padding: 9px 8px; font-size: 10.5px; }
-  .projects { grid-template-columns: minmax(0, 1fr); }
-  .project { min-height: 0; }
   .log li { grid-template-columns: 44px 1fr; }
+}
+
+@media (scripting: none) {
+  .deckTrack { height: auto !important; }
+  .deck { position: relative; height: auto; overflow: visible; padding-bottom: 24px; }
+  .deckSheets { position: static; display: grid; gap: 20px; margin-top: 32px; pointer-events: auto; }
+  .deckSheets > li { position: static; width: auto; display: block; }
+  .sheetCard { opacity: 1; visibility: visible; max-width: 560px; }
+  .deckRail, .deckCount, .deckPrint { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

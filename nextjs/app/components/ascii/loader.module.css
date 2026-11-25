@@ -1,0 +1,55 @@
+/* The first-load screen: ink on paper, like the rest of the site; it lifts away once the stage is ready. */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 13px/1.25 var(--mono);
+  /* if the page's script never runs, never hold it hostage */
+  animation: failsafe 0s 15s forwards;
+}
+.loader[data-lifting] {
+  pointer-events: none;
+  animation: lift 0.8s cubic-bezier(0.7, 0, 0.2, 1) forwards;
+}
+.loader[data-lifting] .inner { animation: rise 0.8s cubic-bezier(0.7, 0, 0.2, 1) forwards; }
+
+.inner { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.kicker { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--rust); }
+.kicker span { color: var(--muted); }
+.art {
+  margin: 0;
+  font: 700 clamp(11px, 2.4vw, 15px)/1.15 var(--mono);
+  white-space: pre;
+  color: var(--ink);
+  user-select: none;
+}
+.art b { font-weight: 700; color: var(--rust); }
+.art i { font-style: normal; color: var(--muted); }
+.meter { display: flex; font-size: 12px; letter-spacing: 0.02em; white-space: pre; }
+.bar { color: var(--ink); }
+.pct { margin-left: 12px; color: var(--rust); }
+.step { min-height: 1.4em; font-size: 11px; letter-spacing: 0.06em; color: var(--muted); }
+.caret { animation: blink 1.05s steps(1) infinite; }
+
+@keyframes blink { 50% { opacity: 0; } }
+/* lifts off the page from the bottom up, like a sheet peeled off the press */
+@keyframes lift { to { clip-path: inset(0 0 100% 0); } }
+@keyframes rise { to { transform: translateY(-40px); opacity: 0; } }
+@keyframes failsafe { to { visibility: hidden; opacity: 0; } }
+
+.loader { clip-path: inset(0 0 0 0); }
+
+@media (scripting: none) {
+  .loader { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader[data-lifting] { animation: fade 0.3s linear forwards; }
+  .loader[data-lifting] .inner { animation: none; }
+  .caret { animation: none; }
+}
+@keyframes fade { to { opacity: 0; } }

@@ -8,7 +8,10 @@
  *                             into 3D, and its own backdrop. Between stops the logo morphs into
  *                             the next one as it swings across, and the new backdrop wipes in
  *                             behind it. A ring of the stop's skills orbits the logo.
- *   work                   -> a block city that rises out of the ground as the section arrives
+ *   work                   -> pinned: a full-screen landscape in four parallax layers that pans
+ *                             as you scroll (see deckMath.ts). Each project's print hangs in the
+ *                             sky beside its card; birds, a boat and chimney smoke move through
+ *                             it, and evening warms into a night of fireflies and falling stars.
  * On top, four objects sit where the page reserves room for them (DOM anchors):
  *   0 portrait of Jovan (from a cutout photo), 1 a puzzle cube that twists, 2 a waving hand,
  *   3 the hero name, in 3D (from nameField.ts). The name has a pass of its own on a grid of
@@ -18,10 +21,12 @@
  * dissolving edge scrambles through random glyphs.
  *
  * Glyph indices are printable ASCII minus 32 (space = 0), so any text can be drawn.
- * Field texture: r = glyph index, g = tone (0 ink, 1 rust), b = strength 0..1, a = inverted.
+ * Field texture: r = glyph index, g = tone (0 ink, 1 rust), b = strength 0..1,
+ * a = 1 inverted, 0.25 / 0.375 the work vista (whose tints the blit paints per pixel).
  */
 
 import { BACKDROPS, LOGO_CAM } from "./journeyMath";
+import { DECK_MAX_SHEETS } from "./deckMath";
 import { LOGO_AR, LOGO_TILE_H, LOGO_TILE_W } from "./logoField";
 
 export const GLYPHS = Array.from({ length: 95 }, (_, i) => String.fromCharCode(32 + i));
@@ -29,6 +34,19 @@ const RAMP = " .,:;-~=+*#%@";         // density, light to heavy
 const NOISE = "01/\\<>[]{}?$&x";       // scramble
 const g = (c: string) => c.charCodeAt(0) - 32;
 const list = (s: string) => [...s].map(g).join(", ");
+
+/**
+ * A little ASCII drawing as GLSL: NAME(p) gives the glyph at cell p (0, 0 top left), or -1 where
+ * it is see-through (a space). A backtick is a solid blank: it hides what is behind but prints
+ * nothing. NAME_SIZE is its size in cells.
+ */
+function sprite(name: string, rows: string[]) {
+  const w = Math.max(...rows.map(r => r.length)), h = rows.length;
+  const cells = rows.flatMap(r => [...r.padEnd(w)].map(c => (c === " " ? -1 : c === "`" ? 0 : g(c))));
+  return `const ivec2 ${name}_SIZE = ivec2(${w}, ${h});
+const int ${name}_G[${w * h}] = int[${w * h}](${cells.join(", ")});
+int ${name}(ivec2 p) { return p.x < 0 || p.y < 0 || p.x >= ${w} || p.y >= ${h} ? -1 : ${name}_G[p.y * ${w} + p.x]; }`;
+}
 
 /** Text to glyph indices; anything outside printable ASCII becomes a space. */
 export function toGlyphs(text: string) {
@@ -42,6 +60,104 @@ export const NOISE_GLYPHS = toGlyphs(NOISE);
  */
 export const RING_CELL = 1, RING_RUST = 2, RING_GLYPH = 4, RING_FAR = 8;
 
+/** Hashing and gradient noise, shared by the field and the blit. */
+const NOISE_GLSL = `const float PI = 3.14159265;
+uint hashU(uvec2 v) {
+  v = v * uvec2(0x9E3779B1u, 0x85EBCA77u);
+  uint h = v.x ^ (v.y + 0x7F4A7C15u);
+  h ^= h >> 15; h *= 0x2C1B3C6Du;
+  h ^= h >> 12; h *= 0x297A2D39u;
+  h ^= h >> 15;
+  return h;
+}
+float hash01(ivec2 p) { return float(hashU(uvec2(p + ivec2(1 << 20))) >> 8) / 16777216.0; }
+vec2 gradAt(ivec2 p) { float a = hash01(p) * 2.0 * PI; return vec2(cos(a), sin(a)); }
+float gnoise(vec2 p) {
+  vec2 i = floor(p), f = p - i;
+  ivec2 q = ivec2(i);
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  float a = dot(gradAt(q), f);
+  float b = dot(gradAt(q + ivec2(1, 0)), f - vec2(1.0, 0.0));
+  float c = dot(gradAt(q + ivec2(0, 1)), f - vec2(0.0, 1.0));
+  float d = dot(gradAt(q + ivec2(1, 1)), f - vec2(1.0, 1.0));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y) * 1.4;
+}
+float fbm1(float x, float seed) {
+  float a = 0.0, w = 0.5, f = 1.0;
+  for (int i = 0; i < 4; i++) { a += w * gnoise(vec2(x * f, seed + float(i) * 7.3)); f *= 2.03; w *= 0.5; }
+  return a;
+}`;
+
+/**
+ * The work vista's shape, shared by the field (which places its characters) and the blit
+ * (which paints its tints per pixel, so edges stay smooth rather than stepping cell by cell).
+ * The ridges are worked out once a frame by the field's ridge pass into uRidge: one texel per
+ * CSS px across the screen and a margin either side, one row per layer, y packed in 16 bits.
+ * The including shader declares uPtr, uView and uMotion.
+ */
+const VISTA_GLSL = `uniform vec4 uDeck;          // work vista: stage top, stage height (CSS px), eased progress in sheets (< 0: off), sheets
+uniform vec4 uVista;         // night 0..1, evening 0..1, (unused), px the prints pan per sheet
+uniform highp sampler2D uRidge;
+uniform float uRidgeMargin;  // CSS px the ridge texture reaches past each side of the screen
+
+// Depth layers, back to front: parallax factor, ridge base and relief (shares of the stage
+// height), feature size (px). Two ranges with peaks, rolling hills, the ground underfoot.
+const vec4 LAYERS[4] = vec4[4](vec4(0.1, 0.6, 0.34, 300.0), vec4(0.3, 0.71, 0.22, 210.0),
+                               vec4(0.62, 0.89, 0.17, 200.0), vec4(1.45, 0.955, 0.045, 130.0));
+const float WATER = 0.745;   // the lake's surface, as a share of the stage height
+// tints for the lit and shadowed faces of the three back layers: by day ink on paper, lighter
+// with distance; by night paper on ink, so the far ranges glow faintly in the haze
+const vec2 TINT_DAY[3] = vec2[3](vec2(0.06, 0.15), vec2(0.12, 0.3), vec2(0.3, 0.46));
+const vec2 TINT_NIGHT[3] = vec2[3](vec2(0.16, 0.11), vec2(0.1, 0.065), vec2(0.05, 0.03));
+
+vec2 gLook;   // the pointer, -1..1 from the middle of the screen (0 with no pointer)
+void vistaLook() { gLook = clamp((uPtr.xy - uView * 0.5) / (uView * 0.5), -1.0, 1.0) * uPtr.z * uMotion; }
+
+// how far a layer has panned: with the scroll, and a little with the pointer
+float layerPan(float f) { return uDeck.z * uVista.w * f + gLook.x * 46.0 * f; }
+// a layer's height at world x, 0..1
+float ridgeR(int l, float wx) {
+  vec4 L = LAYERS[l];
+  float n = fbm1(wx / L.w, float(l) * 13.1 + 2.0);
+  if (l < 2) {
+    // ridged noise makes peaks, on a slow swell so the range rises and falls
+    float peak = clamp(1.0 - abs(n) * 1.9, 0.0, 1.0);
+    return 0.3 * (0.5 + 0.5 * gnoise(vec2(wx / (L.w * 3.1), float(l) * 5.0))) + 0.7 * peak * peak;
+  }
+  // the hills dip into the lake between rises
+  return clamp((0.5 + 0.5 * n) * 1.35 - 0.2, 0.0, 1.0);
+}
+// the ridge's y (stage px) at screen x, worked out from scratch (the ridge pass)
+float ridgeCalc(int l, float sx) {
+  vec4 L = LAYERS[l];
+  return uDeck.y * (L.y - L.z * ridgeR(l, sx + layerPan(L.x))) + gLook.y * 16.0 * L.x;
+}
+float ridgeDecode(vec4 t) { return ((t.r * 255.0 * 256.0 + t.g * 255.0) / 65535.0 * 2.0 - 0.5) * uDeck.y; }
+// ...and read back from the ridge texture, between texels
+float ridgeY(int l, float sx) {
+  float t = sx + uRidgeMargin - 0.5;
+  int w = textureSize(uRidge, 0).x;
+  int i = clamp(int(floor(t)), 0, w - 2);
+  float f = clamp(t - float(i), 0.0, 1.0);
+  return mix(ridgeDecode(texelFetch(uRidge, ivec2(i, l), 0)), ridgeDecode(texelFetch(uRidge, ivec2(i + 1, l), 0)), f);
+}
+// how tall the layer stands at a ridge height y, 0..1
+float ridgeShare(int l, float y) { vec4 L = LAYERS[l]; return (L.y * uDeck.y + gLook.y * 16.0 * L.x - y) / (L.z * uDeck.y); }
+// Which way the face at (sx, y) turns: falling to the right faces the sun. Near the ridge it
+// follows the local slope; deeper down, broader and broader shapes, so the line between light
+// and shade runs down from each peak and the faces spread as they descend.
+bool faceLit(int l, float sx, float y, float ridge) {
+  float span = LAYERS[l].w * 0.04 + max(y - ridge, 0.0) * 0.9;
+  return ridgeY(l, sx + span) - ridgeY(l, sx - span) > 0.0;
+}
+bool isSnow(int l, float share, float depth) { return l < 2 && share > 0.62 && depth < 0.07 * (share - 0.55) / 0.45; }
+// alpenglow: as the sun goes down, the faces turned to it and the snow warm to rust
+float alpenglow(int l) { return l == 2 ? 0.0 : smoothstep(0.15, 0.55, uVista.y) * (1.0 - smoothstep(0.8, 1.0, uVista.y)); }
+// night falls as a wipe from the top of the sky down: true past this line
+float nightLine(float sy) { return uVista.x * 1.3 - 0.3 * (sy / uDeck.y) - 0.5; }
+
+float waterY() { return uDeck.y * WATER + gLook.y * 16.0 * 0.4; }`;
+
 export const VERT = `#version 300 es
 void main() {
   vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
@@ -50,8 +166,10 @@ void main() {
 
 export const FIELD_UNIFORMS = [
   "uCell", "uView", "uT", "uMotion", "uBounds", "uObjRect", "uObjState", "uName", "uNameFrame", "uNamePass",
-  "uLoc", "uRise", "uPtr", "uIntro", "uPortraitAspect", "uPortrait",
+  "uLoc", "uPtr", "uIntro", "uPortraitAspect", "uPortrait",
   "uMorph", "uMorphFx", "uWipeDir", "uRing", "uLogos", "uLogoCount",
+  "uDeck", "uVista", "uPrintBox", "uPrintTile", "uPrintCount", "uPrintGlyph", "uPrintInk",
+  "uRidge", "uRidgeMargin", "uRidgePass",
 ] as const;
 
 export const FIELD_FRAG = `#version 300 es
@@ -65,11 +183,10 @@ uniform float uMotion;       // 1 normally, 0 under reduced motion (no scramble,
 uniform float uBounds[6];    // screen y of each section's top (CSS px), then the last section's bottom
 uniform vec4 uObjRect[4];    // anchors: portrait, cube, hand, name (x, y, w, h in CSS px)
 uniform vec2 uObjState[4];   // presence 0..1, leaving 0..1
-uniform vec4 uLoc;           // journey progress (eased, in stops), work, about (cube), contact (hand), in screens
+uniform vec2 uLoc;           // about (cube) and contact (hand) scroll positions, in screens
 uniform highp sampler2D uName; // hero name: r = signed distance (line heights), g = rust
 uniform vec2 uNameFrame;     // that field's size in line heights; 0 until it is baked
 uniform int uNamePass;       // 1: this pass draws only the name, on the half-size grid
-uniform float uRise;         // how far the city has grown, 0..1
 uniform vec3 uPtr;           // pointer x, y (CSS px), strength 0..1
 uniform float uIntro;        // portrait print-in, 0..1
 uniform float uPortraitAspect; // cutout width / height; 0 = not loaded
@@ -80,10 +197,15 @@ uniform highp sampler2D uLogos; // one tile per stop (logoField.ts): r = signed 
 uniform int uLogoCount;      // 0 until the logos are baked
 uniform float uWipeDir;      // the new backdrop sweeps in: 1 left to right, -1 right to left
 uniform highp sampler2D uRing; // skills ring, one texel per cell (see RING_* flags)
+uniform int uRidgePass;      // 1: this pass works out the vista's ridges (see VISTA_GLSL)
+uniform vec4 uPrintBox[${DECK_MAX_SHEETS}]; // each sheet's print area within the stage (x, y, w, h)
+uniform vec2 uPrintTile;     // one print tile, in characters
+uniform int uPrintCount;     // print tiles (sheet k >= 1 uses tile k - 1); 0 until they load
+uniform highp sampler2D uPrintGlyph; // the tiles stacked top to bottom: glyph index
+uniform highp sampler2D uPrintInk;   // ...and density, mipmapped for smaller screens
 
 out vec4 outCell;
 
-const float PI = 3.14159265;
 const int RAMP_G[${RAMP.length}] = int[${RAMP.length}](${list(RAMP)});
 const int NOISE_G[${NOISE.length}] = int[${NOISE.length}](${list(NOISE)});
 const int NOISE_COUNT = ${NOISE.length};
@@ -98,27 +220,8 @@ float bayer4(ivec2 p) {
   int v = ((a & 1) << 3) | ((b & 1) << 2) | (a & 2) | ((b >> 1) & 1);
   return (float(v) + 0.5) / 16.0;
 }
-uint hashU(uvec2 v) {
-  v = v * uvec2(0x9E3779B1u, 0x85EBCA77u);
-  uint h = v.x ^ (v.y + 0x7F4A7C15u);
-  h ^= h >> 15; h *= 0x2C1B3C6Du;
-  h ^= h >> 12; h *= 0x297A2D39u;
-  h ^= h >> 15;
-  return h;
-}
-float hash01(ivec2 p) { return float(hashU(uvec2(p + ivec2(1 << 20))) >> 8) / 16777216.0; }
+${NOISE_GLSL}
 int noiseGlyph(ivec2 ic, int salt) { return NOISE_G[int(hash01(ic + ivec2(int(uT * 12.0) + salt, 5)) * float(NOISE_COUNT))]; }
-vec2 gradAt(ivec2 p) { float a = hash01(p) * 2.0 * PI; return vec2(cos(a), sin(a)); }
-float gnoise(vec2 p) {
-  vec2 i = floor(p), f = p - i;
-  ivec2 q = ivec2(i);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  float a = dot(gradAt(q), f);
-  float b = dot(gradAt(q + ivec2(1, 0)), f - vec2(1.0, 0.0));
-  float c = dot(gradAt(q + ivec2(0, 1)), f - vec2(0.0, 1.0));
-  float d = dot(gradAt(q + ivec2(1, 1)), f - vec2(1.0, 1.0));
-  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y) * 1.4;
-}
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
 float sdBox(vec3 p, vec3 b) { vec3 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, max(q.y, q.z)), 0.0); }
 
@@ -565,78 +668,350 @@ bool renderOrbit(ivec2 ic, bool behind, inout Ink ink) {
   return true;
 }
 
-// ---------------------------------------------------------------- work: the city
-const float LOT = 1.15;
-float buildingHeight(vec2 id) {
-  float n = gnoise(id * 0.31 + vec2(4.1, 7.3)) * 0.5 + 0.5;
-  float h = 0.15 + 2.7 * n * n + 0.22 * sin(uT * 0.7 + id.x * 1.7 + id.y * 2.3) * uMotion;
-  // they rise in a wave from the middle of the plot
-  float r = length(id);
-  float grow = clamp(uRise * 1.6 - r * 0.09, 0.0, 1.0);
-  return h * grow * (1.0 - smoothstep(4.5, 7.0, r));
-}
-float sdCity(vec3 p, bool bounded) {
-  vec2 id = floor(p.xz / LOT + 0.5);
-  vec2 lp = p.xz - id * LOT;
-  float h = max(buildingHeight(id), 0.001);
-  float d = min(sdBox(vec3(lp.x, p.y - h * 0.5, lp.y), vec3(0.4, h * 0.5, 0.4)), p.y);
-  if (bounded) {
-    // never step past the edge of a lot into a taller neighbour
-    vec2 edge = LOT * 0.5 - abs(lp);
-    d = min(d, max(min(edge.x, edge.y), 0.0) + 0.04);
-  }
-  return d;
-}
-Ink renderCity(vec2 P) {
-  Ink o = Ink(0.0, 0.0, 0, -1);
-  // framed up and to the right, so it shows above the project grid and through it
-  vec2 uv = (P - uView * vec2(0.62, 0.4)) / (0.5 * uView.y);
-  uv.y = -uv.y;
-  float yaw = 0.7 + uLoc.y * 0.9 + uT * 0.03;
-  vec3 ta = vec3(0.0, 0.6, 0.0);
-  vec3 ro = ta + vec3(cos(yaw) * 11.5, 7.2, sin(yaw) * 11.5);
-  vec3 fw = normalize(ta - ro);
-  vec3 rt = normalize(cross(vec3(0.0, 1.0, 0.0), fw));
-  vec3 up = cross(fw, rt);
-  vec3 rd = normalize(uv.x * rt + uv.y * up + 2.1 * fw);
+// ---------------------------------------------------------------- work: the vista
+// A landscape in depth, printed like a linocut (see VISTA_GLSL for its shape). The blit paints
+// its flat tints per pixel; this pass places the characters on top: ridgelines that follow the
+// slope, hatching on the shaded faces, snow, trees, grass, ripples, and the life in it: flocks
+// crossing the sky, a sailboat on the lake, cabins with smoke curling from their chimneys, and
+// after dark fireflies and shooting stars. Each project's print hangs in the sky.
+${VISTA_GLSL}
+const int G_SLASH = ${g("/")}, G_BSLASH = ${g("\\")}, G_US = ${g("_")}, G_BAR = ${g("|")}, G_CARET = ${g("^")};
+const int G_TICK = ${g("'")}, G_COMMA = ${g(",")}, G_QUOTE = ${g('"')}, G_V = ${g("v")}, G_A = ${g("A")};
+const int G_TILDE = ${g("~")}, G_LPAREN = ${g("(")}, G_RPAREN = ${g(")")};
+${sprite("BOAT", ["  |\\", "  |:\\", "  |::\\", "__|___\\_", "\\______/"])}
+${sprite("CABIN", ["  _||__", " /_____\\", " |_[]__|"])}
+const float CABIN_EVERY = 760.0;   // world px between the cabins' slots along the hills
 
-  float t = 0.0;
-  bool hit = false;
-  for (int i = 0; i < 90; i++) {
-    float d = sdCity(ro + rd * t, true);
-    if (d < 0.003) { hit = true; break; }
-    t += d;
-    if (t > 45.0) break;
+int gVista;   // 1: this cell is in the vista; 2: ...and holds a print, with only sky behind it
+
+// Project k's print, slid sideways with its card and bobbing gently in the sky. A clear margin
+// one character wide runs round the artwork, so it reads cleanly over the scenery.
+Ink vistaPrint(int k, vec2 S) {
+  Ink o = Ink(0.0, 0.0, 0, -1);
+  if (k < 1 || k > uPrintCount) return o;
+  vec4 box = uPrintBox[k];
+  box.x += (float(k) - uDeck.z) * uVista.w;
+  if (box.x > uView.x || box.x + box.z < 0.0) return o;
+  box.y += sin(uT * 0.6 + float(k) * 1.7) * 6.0 * uMotion;
+  vec2 tile = uPrintTile * uCell;
+  float sc = min(min(box.z / tile.x, box.w / tile.y), 1.5);
+  bool glyphs = sc > 0.78 && sc < 1.15;   // near full size, keep its own characters (it may overhang its box a little)
+  if (glyphs) sc = 1.0;
+  vec2 size = tile * sc;
+  vec2 org = box.xy + (box.zw - size) * 0.5;
+  if (glyphs) org = floor(org / uCell + 0.5) * uCell;
+  vec2 q = (S - org) / (uCell * sc);
+  if (q.x < -1.0 || q.y < -1.0 || q.x >= uPrintTile.x + 1.0 || q.y >= uPrintTile.y + 1.0) return o;
+  float row = float(k - 1) * uPrintTile.y;
+  ivec2 lim = ivec2(uPrintTile) - 1;
+  float d;
+  if (glyphs) {
+    ivec2 c = ivec2(floor(q));
+    int glyph = 0;
+    if (c.x >= 0 && c.y >= 0 && c.x <= lim.x && c.y <= lim.y)
+      glyph = int(texelFetch(uPrintGlyph, c + ivec2(0, int(row)), 0).r * 255.0 + 0.5);
+    if (glyph == 0) {
+      for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+        ivec2 n = c + ivec2(x, y);
+        if (n.x < 0 || n.y < 0 || n.x > lim.x || n.y > lim.y) continue;
+        if (texelFetch(uPrintGlyph, n + ivec2(0, int(row)), 0).r > 0.5 / 255.0) return Ink(0.0, 0.001, 0, 0);
+      }
+      return o;
+    }
+    d = texelFetch(uPrintInk, c + ivec2(0, int(row)), 0).r;
+    o = Ink(d, 0.62 + 0.38 * d, 0, glyph);
+  } else {
+    if (q.x < 0.0 || q.y < 0.0 || q.x >= uPrintTile.x || q.y >= uPrintTile.y) return o;
+    vec2 uv = vec2(q.x / uPrintTile.x, (q.y + row) / (uPrintTile.y * float(uPrintCount)));
+    float lod = max(0.0, log2(1.0 / sc));
+    // averaging thins the ink out: give some back so the shapes still hold
+    float soft = textureLod(uPrintInk, uv, lod + 1.5).r;
+    d = clamp(textureLod(uPrintInk, uv, lod).r * (1.0 + 0.5 * min(lod, 1.0)), 0.0, 1.0);
+    if (d < 0.05) {
+      if (soft > 0.02) o = Ink(0.0, 0.001, 0, 0);
+      return o;
+    }
+    o = Ink(d, 0.65 + 0.33 * d, 0, -1);
   }
-  if (!hit) return o;
-  vec3 p = ro + rd * t;
-  float fog = exp(-max(t - 9.0, 0.0) * 0.07);
-  // on a phone the text runs straight across it, so it stays faint there
-  float faint = uView.x < 640.0 ? 0.45 : 1.0;
-  if (p.y < 0.01) {
-    // the ground: faint streets on a dotted plot
-    vec2 lp = p.xz - floor(p.xz / LOT + 0.5) * LOT;
-    float street = step(0.47, max(abs(lp.x), abs(lp.y)));
-    float plot = 1.0 - smoothstep(4.0, 7.5, length(p.xz) / LOT);
-    o.d = (0.1 + 0.18 * street) * plot * fog;
-    o.s = 0.55 * faint;
+  o.tone = d > 0.82 ? 1 : 0;
+  // the pointer inks it rust where it passes
+  float near = uPtr.z * (1.0 - smoothstep(40.0, 150.0, length(S + vec2(0.0, uDeck.x) - uPtr.xy)));
+  if (near > 0.2 && d > 0.3) o.tone = 1;
+  return o;
+}
+
+// The characters of one back layer: its ridge follows the slope; the faces turned from the sun
+// are hatched; the snow is flecked; the hills carry pines along the top and scrub on their slopes.
+// Inside the layer it returns true even with no character, so nothing behind shows through.
+bool vistaLayer(int l, vec2 S, ivec2 ic, bool night, inout Ink ink) {
+  float wx = S.x + layerPan(LAYERS[l].x);
+  float ya = ridgeY(l, S.x - 0.5 * uCell.x), yb = ridgeY(l, S.x + 0.5 * uCell.x);
+  float lo = min(ya, yb), hi = max(ya, yb);
+  float top = S.y - 0.5 * uCell.y, bottom = S.y + 0.5 * uCell.y;
+  int col = int(floor(wx / uCell.x));
+  if (bottom < lo) {
+    // a pine is two characters tall
+    if (l != 2 || bottom < lo - 2.0 * uCell.y) return false;
+    float h = hash01(ivec2(col, 71));
+    bool upper = bottom < lo - uCell.y;
+    if (h < 0.06 || (!upper && h < 0.16)) {
+      ink = Ink(0.0, night ? 0.6 : 0.85, 0, upper ? G_CARET : (h < 0.06 ? G_A : G_CARET));
+      return true;
+    }
+    return false;
+  }
+  float ridge = ridgeY(l, S.x);
+  bool lit = faceLit(l, S.x, S.y, ridge);
+  bool snow = isSnow(l, ridgeShare(l, ridge), (S.y - ridge) / uDeck.y);
+  int tone = (lit || snow) && alpenglow(l) > 0.4 && !night ? 1 : 0;
+  if (top <= hi) {
+    float s = (yb - ya) / uCell.y;
+    int glyph = abs(s) > 2.6 ? G_BAR : s < -0.35 ? G_SLASH : s > 0.35 ? G_BSLASH : (lo - top > 0.5 * uCell.y ? G_US : G_DASH);
+    // light: the tint below already draws the edge, smoothly; these give it grain
+    ink = Ink(0.0, l == 0 ? 0.32 : l == 1 ? 0.5 : 0.6, tone, glyph);
+    return true;
+  }
+  ink = Ink(0.0, 0.0, 0, 0);
+  if (!lit && !snow && (col + ic.y) % 3 == 0) {
+    // hatching, in lines that run with the layer as it pans
+    ink = Ink(0.0, night ? 0.22 : (l == 0 ? 0.32 : 0.5), 0, G_SLASH);
+  } else if (snow && hash01(ivec2(col, ic.y)) < 0.25) {
+    ink = Ink(0.0, 0.35, tone, G_DOT);
+  } else if (l == 2 && lit && hash01(ivec2(col, ic.y * 5 + 3)) < 0.07) {
+    ink = Ink(0.0, night ? 0.35 : 0.6, 0, G_COMMA);   // scrub on the sunny slopes
+  }
+  return true;
+}
+
+// The foreground: grass along its edge; stones picked out in the dark below.
+bool vistaGround(vec2 S, ivec2 ic, inout Ink ink) {
+  float wx = S.x + layerPan(LAYERS[3].x);
+  float y = ridgeY(3, S.x);
+  int col = int(floor(wx / uCell.x));
+  if (S.y < y) {
+    if (S.y < y - uCell.y) return false;
+    float h = hash01(ivec2(col, 74));
+    if (h > 0.55) return false;
+    int glyph = h < 0.12 ? G_QUOTE : h < 0.3 ? G_TICK : G_COMMA;
+    // the wind combs through it
+    if (uMotion > 0.0 && h < 0.3 && sin(uT * 2.3 - wx * 0.031) > 0.55) glyph = G_SLASH;
+    ink = Ink(0.0, 0.9, 0, glyph);
+    return true;
+  }
+  ink = Ink(0.0, 0.0, 0, 0);
+  float h = hash01(ivec2(col, ic.y * 3 + 11));
+  if (h < 0.07) ink = Ink(0.0, 0.32, 0, h < 0.025 ? G_DOT : G_COMMA);
+  return true;
+}
+
+// The lake: ripples drifting across it, closer together towards the near shore.
+bool vistaWater(vec2 S, ivec2 ic, bool night, inout Ink ink) {
+  float wy = waterY();
+  if (S.y < wy) return false;
+  ink = Ink(0.0, 0.0, 0, 0);
+  float depth = (S.y - wy) / (uDeck.y - wy);
+  float rx = S.x + layerPan(0.45) + uT * 7.0 * uMotion;
+  if (hash01(ivec2(int(floor(rx / (uCell.x * 3.0))), ic.y)) < 0.05 + 0.08 * depth)
+    ink = Ink(0.0, night ? 0.3 : 0.4, 0, depth > 0.5 ? G_TILDE : G_DASH);
+  return true;
+}
+
+bool inCell(vec2 S, vec2 p) { return all(lessThan(abs(S - p), uCell * 0.5)); }
+
+// A sailboat drifting across the lake under a rust sail, a broken reflection beneath its hull.
+// It sails behind the hills, so it slips in and out of sight between them.
+bool vistaBoat(vec2 S, bool night, inout Ink ink) {
+  float span = uView.x + 420.0;
+  float x = mod(uT * 11.0 + uView.x * 0.62 - layerPan(0.45), span) - 160.0;
+  vec2 org = vec2(x, waterY() + 1.15 * uCell.y - float(BOAT_SIZE.y) * uCell.y);
+  ivec2 q = ivec2(floor((S - org) / uCell));
+  int gl = BOAT(q);
+  if (gl >= 0) {
+    ink = Ink(0.0, night ? 0.7 : 0.95, q.y < 3 && gl != G_BAR ? 1 : 0, gl);
+    return true;
+  }
+  if (q.y == BOAT_SIZE.y && q.x >= 1 && q.x < BOAT_SIZE.x - 1 && hash01(ivec2(q.x, int(uT * 3.0))) < 0.6) {
+    ink = Ink(0.0, 0.45, 0, G_TILDE);
+    return true;
+  }
+  return false;
+}
+
+// The cabin in slot i along the hills, if it has one: its top left (stage px). It sits on the
+// lower of the ground under its two ends, so it never floats off a slope.
+bool cabinAt(int i, out vec2 org) {
+  org = vec2(0.0);
+  if (hash01(ivec2(i, 91)) > 0.55) return false;
+  float sx = (float(i) + 0.15 + 0.6 * hash01(ivec2(i, 92))) * CABIN_EVERY - layerPan(LAYERS[2].x);
+  if (sx > uView.x + 200.0 || sx < -300.0) return false;
+  float ground = max(ridgeY(2, sx + uCell.x), ridgeY(2, sx + float(CABIN_SIZE.x - 1) * uCell.x));
+  if (ground > uDeck.y * 0.865) return false;   // up on the hills, not down at the water
+  org = vec2(sx, ground + 0.6 * uCell.y - float(CABIN_SIZE.y) * uCell.y);
+  return true;
+}
+int cabinSlot(vec2 S) { return int(floor((S.x + layerPan(LAYERS[2].x)) / CABIN_EVERY)); }
+
+// a cabin; after dark its window glows
+bool vistaCabin(vec2 S, bool night, inout Ink ink) {
+  vec2 org;
+  if (!cabinAt(cabinSlot(S), org)) return false;
+  ivec2 q = ivec2(floor((S - org) / uCell));
+  int gl = CABIN(q);
+  if (gl < 0) return false;
+  bool win = night && q.y == 2 && (q.x == 3 || q.x == 4);
+  ink = Ink(0.0, win ? 1.0 : night ? 0.6 : 0.95, win ? 1 : 0, gl);
+  return true;
+}
+
+// smoke from the chimney: puffs that swell as they rise and drift off on the wind
+bool vistaSmoke(vec2 S, bool night, inout Ink ink) {
+  int i0 = cabinSlot(S);
+  for (int j = -1; j <= 0; j++) {
+    vec2 org;
+    if (!cabinAt(i0 + j, org)) continue;
+    vec2 base = org + vec2(3.5 * uCell.x, -0.5 * uCell.y);
+    float seed = hash01(ivec2(i0 + j, 93));
+    for (int k = 0; k < 7; k++) {
+      float fk = float(k);
+      float a = fract(uT * 0.2 + fk / 7.0 + seed);
+      vec2 p = base + vec2(a * a * 52.0 + sin(uT * 1.1 + fk * 2.3) * 5.0 * a, -a * 96.0);
+      if (!inCell(S, p)) continue;
+      int gl = a < 0.16 ? G_DOT : a < 0.5 ? (k % 2 == 0 ? G_LPAREN : G_RPAREN) : a < 0.8 ? G_TILDE : G_DOT;
+      ink = Ink(0.0, (1.0 - a * 0.8) * (night ? 0.5 : 0.7), 0, gl);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Flocks crossing the sky in loose Vs, each bird beating its wings in its own time. The nearer
+// a flock, the bigger and faster its birds and the more it moves with the scroll.
+bool vistaBirds(vec2 S, inout Ink ink) {
+  float H = uDeck.y, span = uView.x + 500.0;
+  for (int f = 0; f < 3; f++) {
+    float ff = float(f);
+    float z = 0.35 + 0.32 * ff;                  // depth: far .. near
+    float d = f == 1 ? -1.0 : 1.0;               // which way it flies
+    float gap = mix(15.0, 30.0, z);
+    vec2 c = vec2(mod(d * uT * mix(13.0, 30.0, z) + span * hash01(ivec2(f, 41)) - layerPan(0.04 + 0.2 * z), span) - 250.0,
+                  max(H * (0.17 + 0.09 * ff), 120.0 + 40.0 * ff) + 9.0 * sin(uT * 0.37 + ff * 2.0));
+    if (abs(S.x - c.x) > gap * 3.4 + uCell.x * 2.0 || abs(S.y - c.y) > gap * 2.0 + uCell.y) continue;
+    for (int i = 0; i < 7; i++) {
+      float fi = float(i), r = floor((fi + 1.0) * 0.5), side = mod(fi, 2.0) < 0.5 ? 1.0 : -1.0;
+      vec2 b = c + vec2(-d * r * gap, side * r * gap * 0.55)
+                 + vec2(sin(uT * 0.9 + fi * 1.3), cos(uT * 0.7 + fi * 2.1)) * 3.0 * uMotion;
+      vec2 q = (S - b) / uCell;
+      if (abs(q.y) >= 0.5) continue;
+      float beat = fract(uT * (2.0 + 0.5 * hash01(ivec2(f, i))) + fi * 0.27);
+      int gl = -1;
+      if (z > 0.8) {
+        // near: a body and two wings, up, level, down, level
+        int k = int(floor(q.x + 1.5));
+        if (k < 0 || k > 2) continue;
+        int frame = int(beat * 4.0);
+        gl = k == 1 ? G_V : frame == 0 ? (k == 0 ? G_BSLASH : G_SLASH) : frame == 2 ? (k == 0 ? G_SLASH : G_BSLASH) : G_DASH;
+      } else if (abs(q.x) < 0.5) {
+        gl = beat < 0.5 ? G_V : G_CARET;
+      }
+      if (gl < 0) continue;
+      ink = Ink(0.0, mix(0.55, 0.95, z), 0, gl);
+      return true;
+    }
+  }
+  return false;
+}
+
+// after dark, fireflies over the hills and the grass, wandering and winking
+bool vistaFireflies(vec2 S, inout Ink ink) {
+  float on = smoothstep(0.55, 0.85, uVista.x);
+  if (on <= 0.0) return false;
+  float H = uDeck.y, span = uView.x + 200.0;
+  for (int i = 0; i < 18; i++) {
+    float fi = float(i);
+    vec2 h = vec2(hash01(ivec2(i, 61)), hash01(ivec2(i, 62)));
+    vec2 p = vec2(mod(h.x * span + 30.0 * sin(uT * 0.31 + fi * 1.7) - layerPan(0.9), span) - 100.0,
+                  H * (0.79 + 0.18 * h.y) + 14.0 * sin(uT * 0.47 + fi * 2.9));
+    if (!inCell(S, p)) continue;
+    float glow = 0.5 + 0.5 * sin(uT * (1.2 + h.y) + fi * 3.1);
+    if (glow < 0.3) continue;
+    ink = Ink(0.0, on * (0.45 + 0.55 * glow), 1, glow > 0.78 ? G_STAR : G_DOT);
+    return true;
+  }
+  return false;
+}
+
+// The sky's characters: by day streaks of cloud; by night stars, and now and then one falling.
+Ink vistaSky(vec2 S, ivec2 ic, bool night) {
+  Ink o = Ink(0.0, 0.0, 0, -1);
+  float H = uDeck.y;
+  float cx = S.x + layerPan(0.18) + uT * 8.0 * uMotion;
+  float c = fbm1(cx / 340.0, float(ic.y) * 0.29 + 41.0);
+  bool cloud = S.y < H * 0.5 && c > 0.3;
+  if (!night) {
+    if (cloud) return Ink(0.0, 0.5, 0, c > 0.4 ? G_EQ : G_DASH);
     return o;
   }
-  const vec2 e = vec2(0.002, -0.002);
-  vec3 n = normalize(e.xyy * sdCity(p + e.xyy, false) + e.yyx * sdCity(p + e.yyx, false) +
-                     e.yxy * sdCity(p + e.yxy, false) + e.xxx * sdCity(p + e.xxx, false));
-  float lum = 0.12 + 0.85 * max(dot(n, normalize(vec3(0.45, 0.85, 0.3))), 0.0);
-  o.d = clamp(mix(0.24, 1.0, 1.0 - lum), 0.0, 1.0) * fog;
-  o.s = 0.9 * faint;
-  // a few buildings are inked in rust: the projects
-  vec2 id = floor(p.xz / LOT + 0.5);
-  if (hash01(ivec2(id) + ivec2(41, 7)) < 0.09) o.tone = 1;
+  // a shooting star: a bright head and a tail that fades behind it
+  float ep = floor(uT / 4.5), ph = fract(uT / 4.5) / 0.24;
+  if (uMotion > 0.0 && ph < 1.0 && hash01(ivec2(int(ep), 51)) < 0.75) {
+    float hx = hash01(ivec2(int(ep), 52)), side = hash01(ivec2(int(ep), 54)) < 0.5 ? 1.0 : -1.0;
+    vec2 dir = normalize(vec2(side * 0.86, 0.5));
+    vec2 a = vec2(uView.x * (0.15 + 0.7 * hx), H * (0.04 + 0.22 * hash01(ivec2(int(ep), 53))));
+    vec2 rel = S - a;
+    float t = dot(rel, dir), off = abs(dot(rel, vec2(-dir.y, dir.x)));
+    float head = ph * 400.0, tail = 130.0;
+    if (off < uCell.y * 0.42 && t > head - tail && t < head + uCell.x * 0.5) {
+      float u = (head - t) / tail;
+      return Ink(0.0, (1.0 - 0.7 * u) * (1.0 - smoothstep(0.7, 1.0, ph)), 0,
+                 u < 0.06 ? G_STAR : u < 0.55 ? (side > 0.0 ? G_BSLASH : G_SLASH) : G_DOT);
+    }
+  }
+  ivec2 sc2 = ivec2(floor((S + vec2(layerPan(0.02), 0.0)) / uCell));
+  float h = hash01(sc2 + ivec2(7, 13));
+  if (h < 0.016 && S.y < H * 0.7) {
+    float tw = 0.5 + 0.5 * sin(uT * (1.0 + h * 90.0) + h * 400.0);
+    return Ink(0.0, 0.3 + 0.65 * tw, 0, h < 0.002 ? G_STAR : h < 0.007 ? G_PLUS : G_DOT);
+  }
+  if (cloud && c > 0.36) return Ink(0.0, 0.3, 0, G_DASH);
   return o;
+}
+
+bool renderVista(vec2 P, ivec2 ic, inout Ink ink) {
+  if (uDeck.z < -0.5) return false;
+  vec2 S = P - vec2(0.0, uDeck.x);
+  if (S.y < 0.0 || S.y >= uDeck.y) return false;
+  vistaLook();
+  gVista = 1;
+  bool night = nightLine(S.y) > 0.0;
+  if (night && vistaFireflies(S, ink)) return true;
+  if (vistaGround(S, ic, ink)) return true;
+  if (vistaCabin(S, night, ink)) return true;
+  if (vistaLayer(2, S, ic, night, ink)) return true;
+  int k = int(floor(uDeck.z));
+  Ink pr = vistaPrint(k, S);
+  if (pr.s <= 0.0) pr = vistaPrint(k + 1, S);
+  if (pr.s > 0.0) { ink = pr; gVista = 2; return true; }
+  if (vistaSmoke(S, night, ink)) return true;
+  if (vistaBoat(S, night, ink)) return true;
+  if (vistaWater(S, ic, night, ink)) return true;
+  if (!night && vistaBirds(S, ink)) return true;
+  if (vistaLayer(1, S, ic, night, ink)) return true;
+  if (vistaLayer(0, S, ic, night, ink)) return true;
+  ink = vistaSky(S, ic, night);
+  return true;
 }
 
 // ---------------------------------------------------------------- main
 void main() {
   ivec2 ic = ivec2(gl_FragCoord.xy);            // column, row from the top
+  if (uRidgePass == 1) {
+    // one texel per CSS px, one row per layer: the ridge's y, packed into two bytes
+    vistaLook();
+    float y = ridgeCalc(ic.y, gl_FragCoord.x - uRidgeMargin);
+    float v = floor(clamp((y / uDeck.y + 0.5) * 0.5, 0.0, 1.0) * 65535.0 + 0.5);
+    outCell = vec4(floor(v / 256.0) / 255.0, mod(v, 256.0) / 255.0, 0.0, 1.0);
+    return;
+  }
   vec2 P = (vec2(ic) + 0.5) * uCell;
   float th = bayer4(ic);
 
@@ -645,6 +1020,7 @@ void main() {
   int region = 0;
   for (int i = 1; i < 5; i++) if (P.y - jag >= uBounds[i]) region = i;
   bool inverted = region == 2;
+  gVista = 0;
 
   Ink ink = Ink(0.0, 0.0, 0, -1);
   bool namePass = uNamePass == 1;
@@ -656,7 +1032,7 @@ void main() {
     if (logo.s > 0.0) ink = logo;                // the logo, or its shadow clearing the backdrop
     renderOrbit(ic, logo.s > 0.01, ink);
   }
-  else if (region == 3) ink = renderCity(P);
+  else if (region == 3 && renderVista(P, ic, ink)) {}
   else if (ic.x % 12 == 6 && ic.y % 6 == 3) ink = Ink(0.0, 0.14, 0, G_PLUS);  // registration marks
 
   for (int k = 0; k < 4; k++) {
@@ -676,21 +1052,25 @@ void main() {
     Ink o;
     if (k == 0) o = renderPortrait(Q, rect, ic);
     else if (k == 3) o = renderName(Q, rect, ic);
-    else o = renderObject(k, Q, rect, k == 1 ? uLoc.z : uLoc.w);
+    else o = renderObject(k, Q, rect, k == 1 ? uLoc.x : uLoc.y);
     if (o.s <= 0.0) continue;
     if (uMotion > 0.0 && st.x < 0.999 && h1 > st.x - 0.12) o.glyph = noiseGlyph(ic, 0);
     ink = o;
+    gVista = 0;
   }
 
   int glyph = ink.glyph >= 0 ? ink.glyph : RAMP_G[clamp(int(floor(ink.d * 12.0 + th * 0.98)), 0, 12)];
   if (ink.s <= 0.0) glyph = 0;
-  // the name's own grid has no sections to invert: its alpha carries the density instead,
-  // for the wash the blit lays behind each of its glyphs
-  outCell = vec4(float(glyph) / 255.0, float(ink.tone) / 255.0, ink.s, namePass ? ink.d : (inverted ? 1.0 : 0.0));
+  // Alpha: 1 inverted, 0.25 the vista (the blit paints it per pixel), 0.375 a print in the vista
+  // (only the sky behind it). The name's own grid has no sections to invert: its alpha carries the
+  // density instead, for the wash the blit lays behind each of its glyphs.
+  float a = gVista == 2 ? 0.375 : gVista == 1 ? 0.25 : inverted ? 1.0 : 0.0;
+  outCell = vec4(float(glyph) / 255.0, float(ink.tone) / 255.0, ink.s, namePass ? ink.d : a);
 }`;
 
 export const BLIT_UNIFORMS = [
   "uField", "uAtlas", "uCellDev", "uDevH", "uPaper", "uInk", "uRust", "uRustInv", "uNameField", "uNameAtlas", "uNameCellDev",
+  "uDeck", "uVista", "uRidge", "uRidgeMargin", "uPtr", "uView", "uT", "uMotion", "uCellCss", "uDpr",
 ] as const;
 
 export const BLIT_FRAG = `#version 300 es
@@ -708,10 +1088,83 @@ uniform vec3 uRustInv;            // rust on the ink sections, a step lighter
 uniform highp sampler2D uNameField; // the hero name's own pass, on half-size cells (same layout)
 uniform highp sampler2D uNameAtlas; // GLYPHS again, at that size
 uniform ivec2 uNameCellDev;       // its cell size in device px; 0 while the name is not drawn
+uniform vec3 uPtr;                // pointer x, y (CSS px), strength 0..1
+uniform vec2 uView;               // viewport, CSS px
+uniform float uT;
+uniform float uMotion;
+uniform vec2 uCellCss;            // cell size, CSS px
+uniform float uDpr;               // device px per CSS px
 
 out vec4 outColor;
 
+${NOISE_GLSL}
+${VISTA_GLSL}
+
+// ---------------------------------------------------------------- the work vista, per pixel
+// Every edge is antialiased over a device pixel, so the ridges, the waterline and the fall of
+// night are smooth curves rather than steps of whole cells.
+float cover(float d) { return clamp(d * uDpr + 0.5, 0.0, 1.0); }   // d: CSS px inside the edge
+
+vec3 layerColor(int l, vec2 S, float ridge, float n) {
+  bool lit = faceLit(l, S.x, S.y, ridge);
+  bool snow = isSnow(l, ridgeShare(l, ridge), (S.y - ridge) / uDeck.y);
+  vec2 td = TINT_DAY[l], tn = TINT_NIGHT[l];
+  float dt = lit ? td.x : td.y, nt = lit ? tn.x : tn.y;
+  if (snow) { dt = 0.0; nt = 0.3; }
+  vec3 day = mix(uPaper, uInk, dt);
+  if (lit || snow) {
+    float glow = alpenglow(l);
+    day = mix(day, mix(uPaper, uRust, max(dt, (snow ? 0.1 : 0.17 - 0.05 * float(l)) * glow)), smoothstep(0.3, 0.5, glow));
+  }
+  return mix(day, mix(uInk, uPaper, nt), n);
+}
+
+vec3 waterColor(vec2 S, float wy, float n) {
+  float depth = (S.y - wy) / (uDeck.y - wy);
+  vec3 day = mix(uPaper, uInk, 0.04), night = mix(uInk, uPaper, 0.03);
+  // the near range upside down, broken up by ripples
+  float drift = uT * 7.0 * uMotion;
+  if (2.0 * wy - S.y >= ridgeY(1, S.x) && gnoise(vec2((S.x + drift) / 26.0, S.y / 2.2)) > -0.35) {
+    day = mix(uPaper, uInk, 0.12);
+    night = mix(uInk, uPaper, 0.07);
+  }
+  // the sky's warmth low down, caught on the far half of the lake
+  day = mix(day, uRust, (0.02 + 0.07 * uVista.y) * (1.0 - smoothstep(0.0, 0.5, depth)));
+  return mix(day, night, n);
+}
+
+// P: CSS px on screen. clear: a print's cell, with only the sky behind it.
+vec3 vistaColor(vec2 P, bool clear) {
+  vec2 S = vec2(P.x, P.y - uDeck.x);
+  float H = uDeck.y;
+  float n = smoothstep(-0.012, 0.012, nightLine(S.y));
+  // the sky: paper warming towards the horizon as the evening comes on; by night ink, a shade
+  // lighter low down where the last of the light lingers
+  float low = smoothstep(H * 0.15, H * WATER, S.y);
+  vec3 day = mix(uPaper, uRust, (0.03 + 0.11 * uVista.y) * low);
+  vec3 night = mix(uInk, uPaper, 0.06 * low);
+  vec3 col = mix(day, night, n);
+  if (clear) return col;
+  // then the layers, back to front
+  for (int l = 0; l < 2; l++) {
+    float ridge = ridgeY(l, S.x);
+    float a = cover(S.y - ridge);
+    if (a > 0.0) col = mix(col, layerColor(l, S, ridge, n), a);
+  }
+  float wy = waterY();
+  float a = cover(S.y - wy);
+  if (a > 0.0) col = mix(col, waterColor(S, wy, n), a);
+  float hills = ridgeY(2, S.x);
+  a = cover(S.y - hills);
+  if (a > 0.0) col = mix(col, layerColor(2, S, hills, n), a);
+  a = cover(S.y - ridgeY(3, S.x));
+  if (a > 0.0) col = mix(col, uInk, a);
+  return col;
+}
+
 bool lit(vec4 cell) { return cell.r > 0.5 / 255.0 && cell.b > 0.0; }
+// 1 where a cell of the work vista holds a print (alpha 0.375; see the field's main)
+float clearAt(ivec2 c) { float a = texelFetch(uField, c, 0).a; return a > 0.31 && a < 0.45 ? 1.0 : 0.0; }
 
 // a glyph in its colour, over a wash of the same colour across the whole cell
 vec3 stamp(vec3 col, vec4 cell, highp sampler2D atlas, ivec2 cellDev, ivec2 o, bool inv, float wash) {
@@ -730,6 +1183,23 @@ void main() {
   vec4 cell = texelFetch(uField, c, 0);
   bool inv = cell.a > 0.5;
   vec3 col = inv ? uInk : uPaper;
+  // the work vista: its tints painted per pixel, and its characters in whichever colour reads
+  // against them
+  if (cell.a > 0.2 && cell.a < 0.45) {
+    vistaLook();
+    // A print's cells have only sky behind them. Blending that between neighbouring cells
+    // rounds the clearing off into a soft cut-out instead of a staircase of whole cells.
+    vec2 cp = vec2(px) / vec2(uCellDev) - 0.5;
+    ivec2 c0 = ivec2(floor(cp));
+    vec2 cf = cp - floor(cp);
+    ivec2 last = textureSize(uField, 0) - 1;
+    float k00 = clearAt(clamp(c0, ivec2(0), last)), k10 = clearAt(clamp(c0 + ivec2(1, 0), ivec2(0), last));
+    float k01 = clearAt(clamp(c0 + ivec2(0, 1), ivec2(0), last)), k11 = clearAt(clamp(c0 + ivec2(1, 1), ivec2(0), last));
+    float m = smoothstep(0.3, 0.7, mix(mix(k00, k10, cf.x), mix(k01, k11, cf.x), cf.y));
+    vec2 P = (vec2(px) + 0.5) / uDpr;
+    col = m >= 1.0 ? vistaColor(P, true) : m <= 0.0 ? vistaColor(P, false) : mix(vistaColor(P, false), vistaColor(P, true), m);
+    inv = dot(col, vec3(0.299, 0.587, 0.114)) < 0.42;
+  }
 
   // Where the name draws anything inside a main cell, that cell's own glyph steps aside, so
   // no half-cut character shows between its letters.

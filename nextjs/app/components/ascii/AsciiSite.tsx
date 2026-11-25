@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowDown, ArrowUp, ArrowUpRight } from "lucide-react";
-import { ABOUT, CAPABILITIES, PROJECTS, SITE, STATS, type Project } from "../../lib/content";
+import { ABOUT, CAPABILITIES, SITE, STATS } from "../../lib/content";
 import AsciiStage from "./AsciiStage";
 import Hud, { type Act } from "./Hud";
 import Journey from "./Journey";
+import Loader from "./Loader";
+import Deck from "./Deck";
 import Scramble from "./Scramble";
 import styles from "./site.module.css";
 
@@ -57,25 +59,11 @@ function SectionHead({ index, title, note }: { index: number; title: string; not
   );
 }
 
-function ProjectCard({ project, index }: { project: Project; index: number }) {
-  return (
-    <article className={styles.project}>
-      <div className={styles.projectMeta}><span>{project.category}</span><span>{pad(index + 1)}</span></div>
-      <h3>{project.title}</h3>
-      <p>{project.summary ?? project.desc}</p>
-      <div className={styles.projectLinks}>
-        {project.link && <a href={project.link} target="_blank" rel="noopener noreferrer" aria-label={`Try ${project.title}`}>try it <ArrowUpRight size={13} aria-hidden="true" /></a>}
-        {project.code && <a href={project.code} target="_blank" rel="noopener noreferrer" aria-label={`${project.title} source code`}>code <ArrowUpRight size={13} aria-hidden="true" /></a>}
-        {project.submission && <a href={project.submission} target="_blank" rel="noopener noreferrer" aria-label={`${project.title} Devpost submission`}>devpost <ArrowUpRight size={13} aria-hidden="true" /></a>}
-      </div>
-    </article>
-  );
-}
-
 export default function AsciiSite({ className }: { className?: string }) {
   const root = useRef<HTMLDivElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const [stageOn, setStageOn] = useState(false);
+  const [load, setLoad] = useState({ done: 0, step: "waking the printer" });
   const [side, setSide] = useState(0);
   const current = SIDES[side];
 
@@ -109,7 +97,8 @@ export default function AsciiSite({ className }: { className?: string }) {
 
   return (
     <div ref={root} className={`${styles.site} ${className ?? ""}`} data-stage={stageOn ? "on" : undefined}>
-      <AsciiStage className={styles.stage} onReady={setStageOn} />
+      <Loader done={load.done} step={load.step} />
+      <AsciiStage className={styles.stage} onReady={setStageOn} onProgress={(done, step) => setLoad({ done, step })} />
       <a href="#main-content" className="skip-link">Skip to content</a>
       <Hud acts={ACTS} />
 
@@ -191,17 +180,16 @@ export default function AsciiSite({ className }: { className?: string }) {
         {/* 03 experience: pinned flythrough down the tunnel, one gate per stop */}
         <Journey head={<SectionHead index={3} title="experience" note="the journey so far" />} />
 
-        {/* 04 work: a city of blocks rises behind the grid */}
-        <section id="work" data-act className={styles.section} aria-labelledby="work-title">
-          <SectionHead index={4} title="work" note="made with curiosity" />
-          <div className={styles.workHead}>
-            <h2 id="work-title" className={styles.display} data-reveal>things i&apos;ve put <em>into the world.</em></h2>
-            <p data-reveal>big brain ideas, weekend experiments, and a few sleepless nights.</p>
-          </div>
-          <div className={styles.projects}>
-            {PROJECTS.slice(0, 6).map((project, index) => <ProjectCard key={project.title} project={project} index={index} />)}
-          </div>
-          <div className={styles.log} data-reveal>
+        {/* 04 work: a pinned stack of prints; each turns like a page to uncover the next */}
+        <section id="work" data-act className={styles.work} aria-labelledby="work-title">
+          <Deck
+            head={<SectionHead index={4} title="work" note="made with curiosity" />}
+            title={<>
+              <h2 id="work-title" className={styles.display}>things i&apos;ve put <em>into the world.</em></h2>
+              <p className={styles.deckLede}>big brain ideas, weekend experiments, and a few sleepless nights.</p>
+            </>}
+          />
+          <div id="milestones" tabIndex={-1} className={styles.log} data-reveal>
             <p className={styles.prompt}>$ git log --milestones</p>
             <ul>
               {ABOUT.achievements.map(item => (

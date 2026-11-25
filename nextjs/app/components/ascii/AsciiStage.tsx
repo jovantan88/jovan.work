@@ -6,6 +6,7 @@ import {
 } from "./stageShader";
 import { INTRO_SPAN, LOGO_FILL, NARROW, P_START, dwell, journeyProgress, logoAt } from "./journeyMath";
 import { LOGO_AR, buildLogoAtlas } from "./logoField";
+import { DECK_MAX_SHEETS, DECK_NARROW, DECK_PAN, boxIn, buildPrintTiles, deckProgress, skyAt } from "./deckMath";
 import { buildNameField } from "./nameField";
 
 /**
@@ -20,7 +21,10 @@ import { buildNameField } from "./nameField";
  *    ASCII over it; html[data-ascii-name] tells the CSS to make the DOM text transparent;
  *  - the experience section's pinned stage ([data-journey]) carries the morphing logo; its
  *    cards ([data-stop], with data-logo and data-skills) say which logo and which skills
- *    (see journeyMath.ts and logoField.ts).
+ *    (see journeyMath.ts and logoField.ts);
+ *  - the work section's pinned stage ([data-deck]) is a stack of sheets ([data-sheet], the cover
+ *    first, then one per project with data-print naming its artwork); [data-deck-print] is where
+ *    each print goes, and the track's scroll pans the landscape (see deckMath.ts).
  * So layout and breakpoints stay in CSS, and the canvas follows them exactly.
  *
  * It also sets html[data-ink-top] / html[data-ink-bottom] while the inverted
@@ -126,13 +130,18 @@ async function loadImage(src: string) {
 export default function AsciiStage({
   className,
   onReady,
+  onProgress,
 }: {
   className?: string;
   onReady?: (ready: boolean) => void;
+  /** How far the stage has got towards its first frame (0..1), and what it is doing. */
+  onProgress?: (done: number, step: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onReadyRef = useRef(onReady);
+  const onProgressRef = useRef(onProgress);
   useEffect(() => { onReadyRef.current = onReady; }, [onReady]);
+  useEffect(() => { onProgressRef.current = onProgress; }, [onProgress]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -141,16 +150,21 @@ export default function AsciiStage({
       alpha: false, antialias: false, depth: false, stencil: false,
       premultipliedAlpha: false, powerPreference: "high-performance",
     });
-    if (!gl) return;
+    const progress = (done: number, step: string) => onProgressRef.current?.(done, step);
+    // without the stage the page still works as plain text, so the loader lets it through
+    if (!gl) { progress(1, "ready"); return; }
 
+    progress(0.12, "mixing the ink");
     let field: Program, blit: Program;
     try {
       field = makeProgram(gl, FIELD_FRAG, FIELD_UNIFORMS);
       blit = makeProgram(gl, BLIT_FRAG, BLIT_UNIFORMS);
     } catch (error) {
       console.warn(error);
+      progress(1, "ready");
       return;
     }
+    progress(0.35, "setting the type");
 
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const family = getComputedStyle(document.documentElement).getPropertyValue("--font-jetbrains-mono").trim()
@@ -161,11 +175,19 @@ export default function AsciiStage({
     const stops = Array.from(document.querySelectorAll<HTMLElement>("[data-stop]"));
     const stopWords = stops.map(el => (el.dataset.skills ?? "").toLowerCase().split(" * ").filter(Boolean));
     const stopLogos = stops.map(el => el.dataset.logo ?? "");
+    const deckStage = document.querySelector<HTMLElement>("[data-deck]");
+    const deckTrack = deckStage?.parentElement ?? null;
+    const deckPrint = document.querySelector<HTMLElement>("[data-deck-print]");
+    const sheetEls = Array.from(document.querySelectorAll<HTMLElement>("[data-sheet]")).slice(0, DECK_MAX_SHEETS);
+    const printKeys = sheetEls.slice(1).map(el => el.dataset.print ?? "");
 
     const bounds = new Float32Array(6);
     const objRect = new Float32Array(ANCHORS.length * 4);
     const objState = new Float32Array(ANCHORS.length * 2);
-    const loc = new Float32Array(4);
+    const loc = new Float32Array(2);
+    const deck = new Float32Array([0, 0, -1, -1]);
+    const vista = new Float32Array(4);
+    const printBox = new Float32Array(DECK_MAX_SHEETS * 4);
     const journeyStage = document.querySelector<HTMLElement>("[data-journey]");
     const journeyHead = journeyStage?.firstElementChild instanceof HTMLElement ? journeyStage.firstElementChild : null;
     const morph = { x: 0, y: 0, size: 1, presence: 0, from: 0, to: 0, w: 0, spin: 0, dir: 1 };
@@ -192,9 +214,18 @@ export default function AsciiStage({
     let nameFbo: WebGLFramebuffer | null = null;
     let nameAtlasTex: WebGLTexture | null = null;
     let portraitTex: WebGLTexture | null = null;
+    // the vista's ridges, worked out once a frame (see VISTA_GLSL): one texel per CSS px across
+    // the screen and a margin either side, one row per layer
+    let ridgeTex: WebGLTexture | null = null;
+    let ridgeFbo: WebGLFramebuffer | null = null;
+    let ridgeW = 0, ridgeMargin = 0;
     let ringTex: WebGLTexture | null = null;
     let logoTex: WebGLTexture | null = null;
     let logoCount = 0;
+    let printGlyphTex: WebGLTexture | null = null;
+    let printInkTex: WebGLTexture | null = null;
+    const printTile = [1, 1];
+    let printCount = 0;
     let nameTex: WebGLTexture | null = null;
     const nameFrame = [0, 0];
     let nameBox = { width: 0, height: 0 }, nameBaking = false, nameShown = false, nameTimer = 0;
@@ -262,6 +293,17 @@ export default function AsciiStage({
         gl.deleteTexture(atlasTex);
         atlasTex = buildAtlas(cellW, cellH, Math.round(cell.font * dpr));
       }
+      // the ridges reach far enough past the screen for the widest slope the shading reads
+      const vwCss = devW / dpr, vhCss = devH / dpr;
+      const margin = Math.ceil(Math.max(vwCss * 0.6, vhCss * 0.4));
+      const rw = Math.ceil(vwCss) + 2 * margin;
+      if (rw !== ridgeW || !ridgeTex) {
+        ridgeW = rw;
+        gl.deleteTexture(ridgeTex);
+        gl.deleteFramebuffer(ridgeFbo);
+        ({ tex: ridgeTex, target: ridgeFbo } = makeTarget(ridgeW, 4));
+      }
+      ridgeMargin = margin;
       // the name's grid: half-size cells, with the glyphs drawn at half size to fit them
       const nw = Math.max(3, Math.round(cellW / 2)), nh = Math.max(4, Math.round(cellH / 2));
       if (nw !== nameCellW || nh !== nameCellH || !nameAtlasTex) {
@@ -285,7 +327,7 @@ export default function AsciiStage({
     // The experience logo (where it is, what it is morphing between) and its skills ring.
     function measureJourney(rect: DOMRect | undefined, vw: number, vh: number, t: number) {
       morph.presence = 0;
-      if (!rect || !stops.length) { clearRing(); return 0; }
+      if (!rect || !stops.length) { clearRing(); return; }
       const count = stops.length;
       const p = journeyProgress(rect.top, rect.height, vh, count);
       const pe = dwell(p);
@@ -314,7 +356,7 @@ export default function AsciiStage({
 
       const i = Math.max(0, Math.min(count - 1, Math.round(pe)));
       const alpha = morph.presence * (1 - smooth((Math.abs(pe - i) - 0.04) / 0.2));
-      if (alpha <= 0) { clearRing(); return pe; }
+      if (alpha <= 0) { clearRing(); return; }
       const tilt = ORBIT.tilt * (at.x < vw / 2 ? 1 : -1);
       const frameW = morph.size * LOGO_FILL;
       // flatter on narrow screens, where there is little height to spare round the logo
@@ -322,7 +364,6 @@ export default function AsciiStage({
       const ry = (frameW / LOGO_AR) * (narrow ? ORBIT.ryNarrow : ORBIT.ry);
       const rx = narrow ? Math.min(frameW * ORBIT.rx, vw / 2 - Math.abs(morph.x - vw / 2) - 14) : frameW * ORBIT.rx;
       drawRing(i, morph.x, morph.y, rx, ry, tilt, alpha, reduced ? 0 : t * 0.2 + p * 1.6, t);
-      return pe;
     }
 
     // Walk round the ellipse and list every cell it passes through, in order and 8-connected,
@@ -391,6 +432,56 @@ export default function AsciiStage({
       ringStale = true;
     }
 
+    // The work vista: how far the landscape has panned, the time of day, and where each print sits.
+    let vistaNight = false;
+    function measureDeck(vh: number) {
+      deck[2] = -1;
+      vistaNight = false;
+      if (!deckStage || !deckTrack || sheetEls.length < 2) return;
+      const tr = deckTrack.getBoundingClientRect();
+      if (tr.bottom < 0 || tr.top > vh) return;
+      const sr = deckStage.getBoundingClientRect();
+      const sw = sr.width, sh = sr.height, n = sheetEls.length;
+      const pe = dwell(deckProgress(tr.top, tr.height, vh, n));
+      const sky = skyAt(pe, n);
+      deck.set([sr.top, sh, pe, n]);
+      vista.set([sky.night, sky.sun, sky.moon, sw * DECK_PAN]);
+      vistaNight = sky.night > 0.75 && sr.top < 36 && sr.bottom > 36;
+      const box = deckPrint ? boxIn(deckPrint, deckStage) : { x: 0, y: 0, w: sw, h: sh };
+      const head = deckStage.firstElementChild instanceof HTMLElement ? deckStage.firstElementChild : null;
+      const headBottom = head ? head.offsetTop + head.offsetHeight + 18 : 0;
+      for (let k = 0; k < n; k++) {
+        const top = Math.max(box.y, headBottom);
+        let bottom = box.y + box.h;
+        // narrow screens: the print fills the room between the section head and the card
+        if (sw < DECK_NARROW) bottom = Math.min(bottom, boxIn(sheetEls[k], deckStage).y - 14);
+        printBox.set([box.x, top, box.w, Math.max(0, bottom - top)], k * 4);
+      }
+    }
+
+    function loadPrints() {
+      if (!gl || !printKeys.length) return;
+      const tiles = buildPrintTiles(printKeys);
+      const upload = (data: Uint8Array, mipmaps: boolean) => {
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, tiles.W, tiles.H * tiles.count, 0, gl.RED, gl.UNSIGNED_BYTE, data);
+        if (mipmaps) gl.generateMipmap(gl.TEXTURE_2D);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, mipmaps ? gl.LINEAR : gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        return tex;
+      };
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      printGlyphTex = upload(tiles.glyph, false);
+      printInkTex = upload(tiles.ink, true);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+      printTile[0] = tiles.W;
+      printTile[1] = tiles.H;
+      printCount = tiles.count;
+    }
+
     function showName(on: boolean) {
       if (on === nameShown) return;
       nameShown = on;
@@ -456,26 +547,24 @@ export default function AsciiStage({
         }
       });
 
-      const [, about, experience, work, contact] = rects;
-      loc[0] = measureJourney(experience, vw, vh, t);
-      loc[1] = work ? -work.top / vh : 0;
-      loc[2] = about ? -about.top / vh : 0;
-      loc[3] = contact ? -contact.top / vh : 0;
-      const rise = work ? smooth((vh - work.top) / (0.8 * vh)) * (1 - smooth((0.55 * vh - work.bottom) / (0.55 * vh))) : 0;
+      const [, about, experience, , contact] = rects;
+      measureJourney(experience, vw, vh, t);
+      measureDeck(vh);
+      loc[0] = about ? -about.top / vh : 0;
+      loc[1] = contact ? -contact.top / vh : 0;
 
       // Let the fixed bars know when the ink section is under them.
-      const top = !!experience && experience.top < 36 && experience.bottom > 36;
+      const top = (!!experience && experience.top < 36 && experience.bottom > 36) || vistaNight;
       const bottom = !!experience && experience.top < vh - 28 && experience.bottom > vh - 28;
       if (top !== inkTop) { inkTop = top; if (top) html.setAttribute("data-ink-top", ""); else html.removeAttribute("data-ink-top"); }
       if (bottom !== inkBottom) { inkBottom = bottom; if (bottom) html.setAttribute("data-ink-bottom", ""); else html.removeAttribute("data-ink-bottom"); }
-      return rise;
     }
 
     function draw(now: number) {
       if (!gl || !fieldTex || !atlasTex) return;
       const vw = devW / dpr, vh = devH / dpr;
       const t = reduced ? 0 : (now - t0) / 1000;
-      const rise = measure(vw, vh, t);
+      measure(vw, vh, t);
       const intro = introStart < 0 ? 1 : clamp01((now - introStart) / INTRO_MS);
       if (intro >= 1) introStart = -1;
 
@@ -490,14 +579,24 @@ export default function AsciiStage({
       gl.uniform1fv(fu.uBounds, bounds);
       gl.uniform4fv(fu.uObjRect, objRect);
       gl.uniform2fv(fu.uObjState, objState);
-      gl.uniform4fv(fu.uLoc, loc);
-      gl.uniform1f(fu.uRise, rise);
+      gl.uniform2fv(fu.uLoc, loc);
       gl.uniform3f(fu.uPtr, ptr.x, ptr.y, ptr.s);
       gl.uniform1f(fu.uIntro, intro);
       gl.uniform1f(fu.uPortraitAspect, portraitAspect);
       gl.uniform4f(fu.uMorph, morph.x, morph.y, morph.size, morph.presence);
       gl.uniform4f(fu.uMorphFx, morph.from, morph.to, morph.w, morph.spin);
       gl.uniform1f(fu.uWipeDir, morph.dir);
+      gl.uniform4fv(fu.uDeck, deck);
+      gl.uniform4fv(fu.uVista, vista);
+      gl.uniform4fv(fu.uPrintBox, printBox);
+      gl.uniform2f(fu.uPrintTile, printTile[0], printTile[1]);
+      gl.uniform1i(fu.uPrintCount, printInkTex ? printCount : 0);
+      gl.activeTexture(gl.TEXTURE8);
+      gl.bindTexture(gl.TEXTURE_2D, printGlyphTex);
+      gl.uniform1i(fu.uPrintGlyph, 8);
+      gl.activeTexture(gl.TEXTURE9);
+      gl.bindTexture(gl.TEXTURE_2D, printInkTex);
+      gl.uniform1i(fu.uPrintInk, 9);
       gl.activeTexture(gl.TEXTURE4);
       gl.bindTexture(gl.TEXTURE_2D, logoTex);
       gl.uniform1i(fu.uLogos, 4);
@@ -517,6 +616,21 @@ export default function AsciiStage({
       gl.uniform1i(fu.uName, 5);
       gl.uniform2f(fu.uNameFrame, nameTex ? nameFrame[0] : 0, nameFrame[1]);
       gl.uniform1i(fu.uNamePass, 0);
+      gl.uniform1f(fu.uRidgeMargin, ridgeMargin);
+      // the vista's ridges first, while the ridge texture is bound nowhere
+      gl.activeTexture(gl.TEXTURE10);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+      if (deck[2] >= 0 && ridgeFbo) {
+        gl.bindFramebuffer(gl.FRAMEBUFFER, ridgeFbo);
+        gl.viewport(0, 0, ridgeW, 4);
+        gl.uniform1i(fu.uRidgePass, 1);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+        gl.viewport(0, 0, cols, rows);
+      }
+      gl.uniform1i(fu.uRidgePass, 0);
+      gl.bindTexture(gl.TEXTURE_2D, ridgeTex);
+      gl.uniform1i(fu.uRidge, 10);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
 
       // the name, on its own finer grid, only while it is on screen
@@ -552,6 +666,16 @@ export default function AsciiStage({
       gl.bindTexture(gl.TEXTURE_2D, nameAtlasTex);
       gl.uniform1i(bu.uNameAtlas, 7);
       gl.uniform2i(bu.uNameCellDev, nameOn ? nameCellW : 0, nameCellH);
+      gl.uniform4fv(bu.uDeck, deck);
+      gl.uniform4fv(bu.uVista, vista);
+      gl.uniform1i(bu.uRidge, 10);
+      gl.uniform1f(bu.uRidgeMargin, ridgeMargin);
+      gl.uniform3f(bu.uPtr, ptr.x, ptr.y, ptr.s);
+      gl.uniform2f(bu.uView, vw, vh);
+      gl.uniform1f(bu.uT, t);
+      gl.uniform1f(bu.uMotion, reduced ? 0 : 1);
+      gl.uniform2f(bu.uCellCss, cellW / dpr, cellH / dpr);
+      gl.uniform1f(bu.uDpr, dpr);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       // Unbind the fields so the next passes never render into a texture bound for sampling.
       gl.activeTexture(gl.TEXTURE6);
@@ -603,9 +727,14 @@ export default function AsciiStage({
     }
 
     (async () => {
+      let loaded = 0;
+      const step = <T,>(work: Promise<T>, label: string) => work.finally(() => {
+        loaded++;
+        if (!disposed) progress(0.35 + loaded * 0.25, label);
+      });
       const [, portrait] = await Promise.allSettled([
-        document.fonts.load(`500 ${CELL.font}px ${family}`),
-        loadImage(PORTRAIT_SRC),
+        step(document.fonts.load(`500 ${CELL.font}px ${family}`), "inking the portrait"),
+        step(loadImage(PORTRAIT_SRC), "pulling the first print"),
       ]);
       if (disposed) return;
       if (portrait.status === "fulfilled") {
@@ -614,10 +743,12 @@ export default function AsciiStage({
         portraitAspect = img.naturalWidth / img.naturalHeight;
       }
       ready = true;
+      loadPrints();
       resize();
       if (!reduced) introStart = performance.now();
       draw(performance.now());   // a frame exists before the page goes see-through
       onReadyRef.current?.(true);
+      progress(1, "ready");
       raf = requestAnimationFrame(frame);
 
       // The name and the logos are baked into distance fields after the first frame, off the
@@ -661,6 +792,10 @@ export default function AsciiStage({
       gl.deleteTexture(ringTex);
       gl.deleteTexture(logoTex);
       gl.deleteTexture(nameTex);
+      gl.deleteTexture(printGlyphTex);
+      gl.deleteTexture(ridgeTex);
+      gl.deleteFramebuffer(ridgeFbo);
+      gl.deleteTexture(printInkTex);
       gl.deleteTexture(nameFieldTex);
       gl.deleteTexture(nameAtlasTex);
       gl.deleteFramebuffer(fbo);

@@ -237,6 +237,7 @@ export const EXPERIENCES: Experience[] = [
 ];
 
 export type Project = {
+  print?: "iris" | "reel" | "globe" | "stairs" | "garment" | "map";
   title: string;
   category: string;
   desc: string;
@@ -250,6 +251,7 @@ export type Project = {
 export const PROJECTS: Project[] = [
   {
     title: "Seer — AI Image Detector",
+    print: "iris",
     summary: "Spot AI-generated images with confidence scores and heatmaps that show where to look.",
     category: "Submission · TikTok TechJam 2026",
     desc:
@@ -261,6 +263,7 @@ export const PROJECTS: Project[] = [
   },
   {
     title: "Showrunner",
+    print: "reel",
     summary: "Turn a product URL into a narrated demo video, with AI planning, recording, and editing.",
     category: "Hackathon · Daytona 2026",
     desc:
@@ -270,6 +273,7 @@ export const PROJECTS: Project[] = [
   },
   {
     title: "SIMS — Society Simulator",
+    print: "globe",
     summary: "Explore how different audiences might react to an idea with AI personas and a virtual society.",
     category: "Hackathon · OpenAI Codex 2026",
     desc:
@@ -279,6 +283,7 @@ export const PROJECTS: Project[] = [
   },
   {
     title: "Career Snapshot SG",
+    print: "stairs",
     summary: "Explore career paths, discover skill gaps, and find SkillsFuture upskilling opportunities.",
     category: "Hackathon · PyCon SG 2026",
     desc:
@@ -288,6 +293,7 @@ export const PROJECTS: Project[] = [
   },
   {
     title: "COCO — Your AI Wardrobe",
+    print: "garment",
     summary: "Digitise your wardrobe, try outfits on a virtual you, and get styling ideas for your next trip.",
     category: "Hackathon · TRAE 2026",
     desc:
@@ -297,6 +303,7 @@ export const PROJECTS: Project[] = [
   },
   {
     title: "HackOMania",
+    print: "map",
     summary: "An extension and app that bring event maps and collaborative chats into Reddit communities.",
     category: "Hackathon · Honorable Mention",
     desc:
